@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
 
 const STORAGE_KEYS = {
   user: "ai_finance_user",
@@ -37,6 +37,7 @@ const defaultCard = {
   number: "**** **** **** 9087",
   expiry: "09/28",
   cvvMasked: "***",
+  brand: "VISA",
 };
 
 const defaultSettings = {
@@ -74,6 +75,24 @@ const team = [
   { initials: "ZG", name: "Zohaib Gulzar", role: "Software Engineer" },
 ];
 
+const testimonials = [
+  {
+    quote: "This dashboard made expense tracking feel simple. I can actually see where my money goes and what to improve next month.",
+    name: "Areeba Khan",
+    role: "Student User",
+  },
+  {
+    quote: "The AI predictor and reports section make the whole project feel like a proper real product instead of a static demo.",
+    name: "Usman Tariq",
+    role: "Finance Reviewer",
+  },
+  {
+    quote: "Card management, profile settings, and dashboard insights all connect nicely. It feels polished and presentation ready.",
+    name: "Sana Javed",
+    role: "Project Evaluator",
+  },
+];
+
 const authSlides = [
   {
     eyebrow: "Smart Tracking",
@@ -105,6 +124,38 @@ const chatbotLanguages = [
   { label: "Roman Urdu", value: "roman-ur" },
   { label: "English", value: "en-US" },
   { label: "Urdu", value: "ur-PK" },
+];
+
+const bankOptions = [
+  "Habib Bank Limited (HBL)",
+  "Meezan Bank",
+  "United Bank Limited (UBL)",
+  "MCB Bank",
+  "Allied Bank Limited (ABL)",
+  "Bank Alfalah",
+  "Faysal Bank",
+  "Askari Bank",
+  "Standard Chartered",
+  "Bank Al Habib",
+  "Habib Metropolitan Bank",
+  "JS Bank",
+  "Summit Bank",
+  "Soneri Bank",
+  "Dubai Islamic Bank",
+  "BankIslami",
+  "Silkbank",
+  "National Bank of Pakistan (NBP)",
+  "The Bank of Punjab",
+  "Sindh Bank",
+  "BOK - Bank of Khyber",
+  "Balochistan Bank",
+  "Samba Bank",
+  "Mobilink Microfinance Bank",
+  "Khushhali Microfinance Bank",
+  "U Microfinance Bank",
+  "NRSP Microfinance Bank",
+  "FINCA Microfinance Bank",
+  "Other",
 ];
 
 function getStored(key, fallback) {
@@ -157,6 +208,23 @@ function onlyDigits(value) {
 function maskCardNumber(value) {
   const digits = onlyDigits(value).slice(0, 16);
   return `**** **** **** ${digits.slice(-4).padStart(4, "*")}`;
+}
+
+function detectCardBrand(number) {
+  const digits = onlyDigits(number);
+  if (/^4/.test(digits)) return "VISA";
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return "Mastercard";
+  if (/^3[47]/.test(digits)) return "Amex";
+  return "Secure";
+}
+
+function isExpiryValid(expiry) {
+  if (!/^\d{2}\/\d{2}$/.test(expiry)) return false;
+  const [month, year] = expiry.split("/").map(Number);
+  if (month < 1 || month > 12) return false;
+  const fullYear = 2000 + year;
+  const expiryDate = new Date(fullYear, month, 0, 23, 59, 59);
+  return expiryDate >= new Date();
 }
 
 function buildPrediction(expenses) {
@@ -349,7 +417,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AuthPage mode="login" user={user} setUser={setUser} setExpenses={setExpenses} setCard={setCard} setSettings={setSettings} setChatHistory={setChatHistory} setIsAuthenticated={setIsAuthenticated} />} />
-      <Route path="/signup" element={<AuthPage mode="signup" user={user} setUser={setUser} setExpenses={setExpenses} setCard={setCard} setSettings={setSettings} setChatHistory={setChatHistory} setIsAuthenticated={setIsAuthenticated} />} />
+      <Route path="/signup" element={<Navigate to="/login?mode=signup" replace />} />
       <Route
         path="/dashboard"
         element={
@@ -379,22 +447,39 @@ function App() {
 
 function LandingPage() {
   usePageMeta("AI Personal Finance | Smart Decisions", "landing-page");
+  const [heroSlide, setHeroSlide] = useState(0);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroSlide((current) => (current + 1) % 3);
+    }, 3200);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveTestimonial((current) => (current + 1) % testimonials.length);
+    }, 3400);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
     <div className="page-shell">
-      <header className="finance-nav">
-        <a className="brand finance-brand" href="#home"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-core">AI</span></span><span>Personal Finance</span></a>
+      <header className="finance-nav landing-reveal landing-reveal-nav">
+        <a className="brand finance-brand" href="#home"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Predict. Track. Save.</small></span></a>
         <nav className="nav-links finance-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#about">About</a><a href="#team">Team</a><a href="#contact">Contact</a></nav>
-        <div className="nav-actions"><Link className="btn btn-finance-ghost" to="/login">Login</Link><Link className="btn btn-finance-primary" to="/signup">Create Account</Link></div>
+        <div className="nav-actions"><Link className="btn btn-finance-ghost" to="/login">Login</Link><Link className="btn btn-finance-primary" to="/login?mode=signup">Create Account</Link></div>
       </header>
 
       <main className="finance-landing">
-        <section className="finance-hero" id="home">
+        <section className={`finance-hero landing-reveal landing-reveal-hero hero-slide-${heroSlide}`} id="home">
           <div className="finance-hero-copy">
             <p className="finance-tag">AI Powered Personal Finance</p>
             <h1>See where your money goes before it disappears.</h1>
             <p>Track expenses, manage cards, download reports, and chat with an AI predictor that helps you plan your next month more confidently.</p>
             <div className="hero-actions">
-              <Link className="btn btn-finance-primary" to="/signup">Start Free</Link>
+              <Link className="btn btn-finance-primary" to="/login?mode=signup">Start Free</Link>
               <Link className="btn btn-finance-ghost" to="/login">Open Dashboard</Link>
             </div>
             <div className="finance-hero-metrics">
@@ -402,8 +487,13 @@ function LandingPage() {
               <div><strong>24/7</strong><span>AI assistant access</span></div>
               <div><strong>1 App</strong><span>All finance tools</span></div>
             </div>
+            <div className="hero-slider-dots" aria-hidden="true">
+              {[0, 1, 2].map((dot) => <span key={dot} className={heroSlide === dot ? "active" : ""}></span>)}
+            </div>
           </div>
           <div className="finance-hero-visual" aria-hidden="true">
+            <div className="finance-orb finance-orb-a"></div>
+            <div className="finance-orb finance-orb-b"></div>
             <div className="finance-screen">
               <div className="finance-screen-head">
                 <span></span><span></span><span></span>
@@ -441,13 +531,13 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-strip">
+        <section className="finance-strip landing-reveal landing-reveal-strip">
           <div><strong>Expense Tracking</strong><span>Manual + categorized entries</span></div>
           <div><strong>AI Prediction</strong><span>Future spend and saving suggestions</span></div>
           <div><strong>Secure Access</strong><span>User, settings, cards, reports</span></div>
         </section>
 
-        <section className="finance-section" id="features">
+        <section className="finance-section landing-reveal landing-reveal-section" id="features">
           <div className="finance-section-head">
             <p className="finance-tag">Core Features</p>
             <h2>Everything important in one finance workspace.</h2>
@@ -460,7 +550,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-section finance-story" id="about">
+        <section className="finance-section finance-story landing-reveal landing-reveal-section" id="about">
           <div className="finance-story-copy">
             <p className="finance-tag">Why This Project</p>
             <h2>Built for students and users who want finance clarity, not complexity.</h2>
@@ -485,7 +575,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-section" id="team">
+        <section className="finance-section landing-reveal landing-reveal-section" id="team">
           <div className="finance-section-head center">
             <p className="finance-tag">Project Team</p>
             <h2>People behind the platform.</h2>
@@ -495,13 +585,37 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-section finance-end-panel" id="contact">
+        <section className="finance-section finance-testimonial-panel landing-reveal landing-reveal-section">
+          <div className="finance-section-head">
+            <div>
+              <p className="finance-tag">User Feedback</p>
+              <h2>Animated testimonial showcase.</h2>
+            </div>
+            <div className="testimonial-dots" aria-hidden="true">
+              {testimonials.map((_, index) => <button key={index} type="button" className={activeTestimonial === index ? "active" : ""} onClick={() => setActiveTestimonial(index)}></button>)}
+            </div>
+          </div>
+          <div className="testimonial-carousel">
+            <div className="testimonial-track" style={{ transform: `translateX(calc(-${activeTestimonial * 100}% - ${activeTestimonial * 24}px))` }}>
+              {testimonials.map((item) => (
+                <article className="testimonial-card finance-testimonial-card" key={item.name}>
+                  <span className="quote-mark">"</span>
+                  <p>{item.quote}</p>
+                  <strong>{item.name}</strong>
+                  <span>{item.role}</span>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="finance-section finance-end-panel landing-reveal landing-reveal-section" id="contact">
           <div className="finance-end-copy">
             <p className="finance-tag">Ready To Start?</p>
             <h2>Turn your final year project into a finance product that actually feels live.</h2>
             <p>From signup and secure account flow to expense analytics, ATM card preview, report export, and AI guidance, this platform now brings the full journey together in one polished experience.</p>
             <div className="hero-actions">
-              <Link className="btn btn-finance-primary" to="/signup">Create Account</Link>
+              <Link className="btn btn-finance-primary" to="/login?mode=signup">Create Account</Link>
               <Link className="btn btn-finance-ghost" to="/login">Login Now</Link>
             </div>
           </div>
@@ -537,7 +651,9 @@ function LandingPage() {
 
 function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setChatHistory, setIsAuthenticated }) {
   const navigate = useNavigate();
-  const isLogin = mode === "login";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentMode = searchParams.get("mode") === "signup" ? "signup" : mode;
+  const isLogin = currentMode === "login";
   usePageMeta(isLogin ? "Login | AI Personal Finance" : "Sign Up | AI Personal Finance", "auth-page");
   const [form, setForm] = useState({ name: user.name, email: user.email, password: "", confirmPassword: "" });
   const [activeSlide, setActiveSlide] = useState(0);
@@ -622,10 +738,10 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
   };
 
   return (
-    <div className={`auth-shell ${isLogin ? "auth-shell-login" : "auth-shell-signup"}`}>
-      <section className="auth-panel auth-info auth-showcase">
+    <div className={`auth-shell ${isLogin ? "auth-shell-login" : "auth-shell-signup"} auth-slide-${activeSlide}`}>
+      <section className="auth-panel auth-info auth-showcase auth-reveal auth-reveal-showcase">
         <div className="auth-showcase-top">
-          <Link className="brand auth-brand-dark" to="/"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-core">AI</span></span><span>Personal Finance</span></Link>
+          <Link className="brand auth-brand-dark" to="/"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Secure finance workspace</small></span></Link>
           <span className="auth-showcase-chip">{isLogin ? "Secure Access" : "New Account"}</span>
         </div>
         <div className="auth-showcase-copy">
@@ -633,8 +749,11 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
           <h1>{isLogin ? "One place for your money, reports, and AI help." : "Create your finance space in seconds."}</h1>
           <h3 className="auth-slider-title">{currentSlide.title}</h3>
           <p className="auth-copy">{isLogin ? "Log in to review expenses, budgets, linked cards, settings, and AI predictions without jumping between screens." : "Register once and move directly into your personal finance dashboard with transactions, reports, and AI insights ready to use."}</p>
+          <div className="auth-dots" aria-hidden="true">{authSlides.map((slide, index) => <button key={slide.theme} type="button" className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} aria-label={`Show slide ${index + 1}`}></button>)}</div>
         </div>
         <div className={`auth-visual-stage auth-visual-stage-${currentSlide.theme}`} aria-hidden="true">
+          <div className="auth-stage-orb auth-stage-orb-a"></div>
+          <div className="auth-stage-orb auth-stage-orb-b"></div>
           <div className="auth-media-shell">
             <div className="auth-media-topbar"><span></span><span></span><span></span></div>
             <div className={`auth-media auth-media-${currentSlide.theme}`}>
@@ -685,7 +804,6 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
           <div className="auth-glow auth-glow-b"></div>
         </div>
         <div className="auth-copy-wrap">
-          <div className="auth-dots">{authSlides.map((slide, index) => <button key={slide.theme} type="button" className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} aria-label={`Show slide ${index + 1}`}></button>)}</div>
           <div className="auth-info-pills">
             <span>Expense tracking</span>
             <span>AI predictor</span>
@@ -693,7 +811,7 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
           </div>
         </div>
       </section>
-      <section className="auth-panel auth-form-panel">
+      <section className="auth-panel auth-form-panel auth-reveal auth-reveal-form">
         <div className="auth-card">
           <div className="auth-card-head">
             <p className="form-tag">{isLogin ? "Login" : "Create Account"}</p>
@@ -706,7 +824,7 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             <label>Email Address<input value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} type="email" placeholder="you@example.com" required /></label>
             <label>Password<div className="password-field"><input value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} type={showPassword ? "text" : "password"} placeholder="Enter password" required /><button className="password-toggle" type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? "Hide" : "Show"}</button></div></label>
             {!isLogin ? <label>Confirm Password<div className="password-field"><input value={form.confirmPassword} onChange={(e) => setForm((s) => ({ ...s, confirmPassword: e.target.value }))} type={showConfirmPassword ? "text" : "password"} placeholder="Re-enter password" required /><button className="password-toggle" type="button" onClick={() => setShowConfirmPassword((value) => !value)}>{showConfirmPassword ? "Hide" : "Show"}</button></div>{form.confirmPassword && form.password !== form.confirmPassword ? <small className="field-helper error">Passwords do not match yet.</small> : <small className="field-helper">Use a strong password for better account safety.</small>}</label> : null}
-            {isLogin ? <div className="form-row auth-row-light"><label className="remember-line"><input type="checkbox" defaultChecked /> Remember me</label><Link to="/signup">Forgot password?</Link></div> : null}
+            {isLogin ? <div className="form-row auth-row-light"><label className="remember-line"><input type="checkbox" defaultChecked /> Remember me</label><button type="button" className="auth-link-btn" onClick={() => setSearchParams({ mode: "signup" })}>Need an account?</button></div> : null}
             {errorText ? <small className="field-helper error">{errorText}</small> : null}
             <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>{submitting ? "Please wait..." : isLogin ? "Sign In" : "Register Now"}</button>
           </form>
@@ -720,7 +838,7 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             <span>Fast access</span>
             <span>AI-ready dashboard</span>
           </div>
-          <p className="auth-switch">{isLogin ? <>Don't have an account? <Link to="/signup">Create one now</Link></> : <>Already have an account? <Link to="/login">Login here</Link></>}</p>
+          <p className="auth-switch">{isLogin ? <>Don't have an account? <button type="button" className="auth-link-btn" onClick={() => setSearchParams({ mode: "signup" })}>Create one now</button></> : <>Already have an account? <button type="button" className="auth-link-btn" onClick={() => setSearchParams({ mode: "login" })}>Login here</button></>}</p>
         </div>
       </section>
     </div>
@@ -741,8 +859,12 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const [thinking, setThinking] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [activeSection, setActiveSection] = useState("dashboard");
+  const [chatbotStatus, setChatbotStatus] = useState("Local AI");
   const [cardMessage, setCardMessage] = useState("");
   const [cardMessageType, setCardMessageType] = useState("info");
+  const [toast, setToast] = useState(null);
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [expenseForm, setExpenseForm] = useState({ title: "", category: "Food", date: "", amount: "" });
   const [profileForm, setProfileForm] = useState({
     name: user.name,
@@ -757,6 +879,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const [cardForm, setCardForm] = useState({ holder: "", bank: "", number: "", expiry: "", cvv: "", zip: "" });
   const messagesRef = useRef(null);
   const recognitionRef = useRef(null);
+  const expenseOnly = useMemo(() => expenses.filter((item) => item.type !== "income"), [expenses]);
   const monthlySeries = [
     { label: "Jan", value: 12000, x: 20, y: 220 },
     { label: "Feb", value: 17600, x: 130, y: 168 },
@@ -769,6 +892,102 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     { label: "Food", spent: 14800, budget: 18000, color: "blue-fill" },
     { label: "Transport", spent: 9200, budget: 12000, color: "red-fill" },
     { label: "Utilities", spent: 8600, budget: 11000, color: "green-fill" },
+  ];
+  const categoryOverview = useMemo(() => {
+    const totalExpense = expenseOnly.reduce((sum, item) => sum + Number(item.amount), 0) || 1;
+    const grouped = expenseOnly.reduce((acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + Number(item.amount);
+      return acc;
+    }, {});
+
+    const palette = {
+      Food: "blue-fill",
+      Transportation: "red-fill",
+      Transport: "red-fill",
+      Utilities: "green-fill",
+      Shopping: "blue-fill",
+      Health: "green-fill",
+      Other: "red-fill",
+    };
+
+    const notes = {
+      Food: "Dining, groceries, and cafe orders",
+      Transportation: "Fuel, ride bookings, and travel",
+      Transport: "Fuel, ride bookings, and travel",
+      Utilities: "Bills, internet, and monthly services",
+      Shopping: "Lifestyle, personal items, and extras",
+      Health: "Medicine and wellness costs",
+      Other: "General personal spending",
+    };
+
+    return Object.entries(grouped)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([label, spent]) => ({
+        label,
+        spent,
+        budget: Math.max(spent * 1.18, spent + 2500),
+        width: Math.min(100, Math.round((spent / totalExpense) * 160)),
+        percent: Math.round((spent / totalExpense) * 100),
+        color: palette[label] || "blue-fill",
+        note: notes[label] || "Tracked from your current records",
+      }));
+  }, [expenseOnly]);
+  const totalBudget = useMemo(() => categoryOverview.reduce((sum, item) => sum + item.budget, 0), [categoryOverview]);
+  const budgetUsed = totalBudget ? Math.round((prediction.expense / totalBudget) * 100) : 0;
+  const savingsRate = prediction.income ? Math.max(0, Math.round((prediction.savings / prediction.income) * 100)) : 0;
+  const accountHealth = Math.max(72, Math.min(96, Math.round((savingsRate + (settings.budgetAlerts ? 12 : 4) + (card?.number ? 8 : 0)) / 1.3)));
+  const recentTransactions = expenses.slice(0, 6);
+  const liveCardBrand = detectCardBrand(cardForm.number);
+  const liveCardDigits = onlyDigits(cardForm.number);
+  const liveCardNumber = cardForm.number || "**** **** **** 9087";
+  const liveCardHolder = cardForm.holder || user.name || "Card Holder";
+  const liveCardBank = cardForm.bank || "AI Personal Finance";
+  const liveCardExpiry = cardForm.expiry || "09/28";
+  const cardChecks = [
+    { label: "Holder name added", passed: cardForm.holder.trim().length > 2 },
+    { label: "16-digit card number", passed: liveCardDigits.length === 16 },
+    { label: "Valid expiry date", passed: isExpiryValid(cardForm.expiry) },
+    { label: "Secure CVV entered", passed: cardForm.cvv.length === 3 },
+    { label: "Billing ZIP attached", passed: cardForm.zip.trim().length >= 4 },
+  ];
+  const cardCompletion = Math.round((cardChecks.filter((item) => item.passed).length / cardChecks.length) * 100);
+  const insightCards = [
+    {
+      icon: "SI",
+      title: "Spending Trend",
+      text: `Your current expense total is ${formatCurrency(prediction.expense)} and the next-month projection is around ${formatCurrency(prediction.projectedExpense)}.`,
+    },
+    {
+      icon: "BA",
+      title: "Budget Alert",
+      text: `${prediction.topCategory} is using the highest share of your budget. Keeping it below ${formatCurrency(prediction.topCategoryAmount * 0.9)} will improve next-month control.`,
+    },
+    {
+      icon: "SG",
+      title: "Savings Goal",
+      text: `You can realistically protect about ${formatCurrency(prediction.possibleSaving)} if you cut unnecessary ${prediction.topCategory.toLowerCase()} spending this month.`,
+    },
+    {
+      icon: "IO",
+      title: "Income Opportunity",
+      text: `Your current savings rate is ${savingsRate}%. A higher savings target becomes practical once your spending stays near ${formatCurrency(prediction.safeBudget)}.`,
+    },
+  ];
+  const plannerRows = categoryOverview.map((item) => {
+    const utilization = Math.min(100, Math.round((item.spent / item.budget) * 100));
+    const recommendation = utilization > 85 ? "High usage, reduce optional spend" : utilization > 70 ? "Watch closely this week" : "Within a safe range";
+    return { ...item, utilization, recommendation };
+  });
+  const upcomingBills = [
+    { label: "Internet Bill", due: "05 Apr", amount: formatCurrency(4200), status: "Due soon" },
+    { label: "Electricity", due: "08 Apr", amount: formatCurrency(7600), status: "Upcoming" },
+    { label: "Mobile Package", due: "11 Apr", amount: formatCurrency(1800), status: "Scheduled" },
+  ];
+  const walletHealthCards = [
+    { title: "Available to Spend", value: formatCurrency(Math.max(prediction.safeBudget - prediction.expense, 0)), note: "Safe room left under your recommended limit" },
+    { title: "Reports Ready", value: "03 exports", note: "Finance summaries can be downloaded any time" },
+    { title: "Security Layer", value: card?.number ? "Card protected" : "No card linked", note: "Masked card preview and account controls are active" },
   ];
 
   useEffect(() => {
@@ -797,6 +1016,28 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   useEffect(() => {
     if (chatbotOpen) setUnreadCount(0);
   }, [chatbotOpen]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    const ids = ["dashboard", "wallet", "transactions", "reports", "settings", "user-account", "analytical"];
+    const handleScroll = () => {
+      const current = ids.findLast((id) => {
+        const element = document.getElementById(id);
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        return rect.top <= 160 && rect.bottom >= 130;
+      });
+      if (current) setActiveSection(current);
+    };
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -828,6 +1069,10 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     }
   };
 
+  const showToast = (type, message) => {
+    setToast({ type, message });
+  };
+
   const speakReply = (text) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -839,9 +1084,26 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const answerChat = async (text) => {
     addChat("user", text);
     setThinking(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    let reply = "";
+    try {
+      const payload = await apiRequest("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          message: text,
+          user,
+          expenses,
+          settings,
+          chatHistory,
+        }),
+      });
+      reply = payload.text || "";
+      if (reply) setChatbotStatus("Secure Server AI");
+    } catch {
+      setChatbotStatus("Local AI");
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
     setThinking(false);
-    const reply = buildLocalReply(text, prediction, user, expenses, settings, chatbotLanguage);
+    if (!reply) reply = buildLocalReply(text, prediction, user, expenses, settings, chatbotLanguage);
     addChat("bot", reply);
     speakReply(reply);
   };
@@ -857,6 +1119,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     setCard(defaultCard);
     setSettings(defaultSettings);
     setChatHistory([]);
+    showToast("success", "Logged out successfully.");
     navigate("/login");
   };
 
@@ -871,16 +1134,48 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       amount: Number(expenseForm.amount),
       type: "expense",
     };
-    setExpenses((current) => [item, ...current]);
+    if (editingTransaction !== null) {
+      setExpenses((current) => current.map((entry, index) => index === editingTransaction ? item : entry));
+      setEditingTransaction(null);
+      showToast("success", "Transaction updated successfully.");
+    } else {
+      setExpenses((current) => [item, ...current]);
+      setFlashFirst(true);
+      window.setTimeout(() => setFlashFirst(false), 1200);
+      showToast("success", "New expense added to recent transactions.");
+    }
     setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
-    setFlashFirst(true);
     addChat("bot", `Naya expense "${item.title}" add ho gaya. Updated projection ${formatCurrency(buildPrediction([item, ...expenses]).projectedExpense)} ke qareeb hai.`);
-    window.setTimeout(() => setFlashFirst(false), 1200);
   };
 
   const saveProfile = (event) => {
     event.preventDefault();
     setUser((current) => ({ ...current, ...profileForm }));
+    showToast("success", "Profile updated successfully.");
+  };
+
+  const editTransaction = (index) => {
+    const item = expenses[index];
+    if (!item || item.type === "income") return;
+    setExpenseForm({
+      title: item.title,
+      category: item.category,
+      date: item.date,
+      amount: String(item.amount),
+    });
+    setEditingTransaction(index);
+    document.getElementById("manual-expense")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("info", "Transaction loaded into form for editing.");
+  };
+
+  const deleteTransaction = (index) => {
+    const item = expenses[index];
+    setExpenses((current) => current.filter((_, currentIndex) => currentIndex !== index));
+    if (editingTransaction === index) {
+      setEditingTransaction(null);
+      setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
+    }
+    showToast("success", `"${item?.title || "Transaction"}" removed successfully.`);
   };
 
   const saveCard = (event) => {
@@ -895,14 +1190,19 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       setCardMessage("Card number must be 16 digits.");
       return;
     }
-    if (cardForm.expiry.length < 5) {
+    if (!isExpiryValid(cardForm.expiry)) {
       setCardMessageType("error");
-      setCardMessage("Expiry date should be in MM/YY format.");
+      setCardMessage("Expiry date should be valid and in MM/YY format.");
       return;
     }
     if (cardForm.cvv.length < 3) {
       setCardMessageType("error");
       setCardMessage("CVV should be 3 digits.");
+      return;
+    }
+    if (cardForm.zip.trim().length < 4) {
+      setCardMessageType("error");
+      setCardMessage("Billing ZIP / postal code should be at least 4 digits.");
       return;
     }
     setCard({
@@ -911,10 +1211,11 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       number: maskCardNumber(cardForm.number),
       expiry: cardForm.expiry,
       cvvMasked: cardForm.cvv.replace(/\d/g, "*"),
+      brand: detectCardBrand(cardForm.number),
     });
     setCardForm({ holder: user.name || "", bank: "", number: "", expiry: "", cvv: "", zip: "" });
     setCardMessageType("success");
-    setCardMessage("ATM / debit card added successfully and secure preview updated.");
+    setCardMessage("ATM / debit card added successfully. Masked preview, brand detection, and secure status have been updated.");
   };
 
   const downloadReport = () => {
@@ -931,6 +1232,8 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       `Income: ${formatCurrency(prediction.income)}`,
       `Expense: ${formatCurrency(prediction.expense)}`,
       `Savings: ${formatCurrency(prediction.savings)}`,
+      `Recommended Safe Budget: ${formatCurrency(prediction.safeBudget)}`,
+      `Top Category: ${prediction.topCategory}`,
       "",
       "Recent Transactions",
       recent,
@@ -942,38 +1245,77 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     document.body.append(link);
     link.click();
     link.remove();
+    showToast("success", "Report downloaded successfully.");
   };
 
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
-        <h1>AI Personal Finance</h1>
+        <div className="sidebar-brand"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Finance command center</small></span></div>
         <nav className="sidebar-nav dashboard-nav">
-          <a className="active" href="#dashboard">Dashboard</a>
-          <a href="#wallet">Wallet</a>
-          <a href="#transactions">Transactions</a>
-          <a href="#reports">Report</a>
-          <a href="#settings">Settings</a>
-          <a href="#user-account">User Account</a>
-          <a href="#analytical">Analytics</a>
+          <a className={activeSection === "dashboard" ? "active" : ""} href="#dashboard">Dashboard</a>
+          <a className={activeSection === "wallet" ? "active" : ""} href="#wallet">Wallet</a>
+          <a className={activeSection === "transactions" ? "active" : ""} href="#transactions">Transactions</a>
+          <a className={activeSection === "reports" ? "active" : ""} href="#reports">Report</a>
+          <a className={activeSection === "settings" ? "active" : ""} href="#settings">Settings</a>
+          <a className={activeSection === "user-account" ? "active" : ""} href="#user-account">User Account</a>
+          <a className={activeSection === "analytical" ? "active" : ""} href="#analytical">Analytics</a>
           <button className="sidebar-logout-btn" type="button" onClick={handleLogout} disabled={loggingOut}>{loggingOut ? "Logging out..." : "Logout"}</button>
         </nav>
       </aside>
 
       <main className="dashboard-main">
         <header className="dashboard-topbar" id="dashboard">
-          <div className="dashboard-heading"><p className="dashboard-kicker">Overview</p><h2>Welcome back, {user.name}</h2></div>
+          <div className="dashboard-heading"><p className="dashboard-kicker">Overview</p><h2>Welcome back, {user.name}</h2><p className="dashboard-intro">Your account, reports, cards, predictions, and transactions are now connected in one live finance workspace.</p></div>
+          <div className="topbar-status-strip">
+            <div className="topbar-status-card"><span>Account Health</span><strong>{accountHealth}/100</strong></div>
+            <div className="topbar-status-card"><span>Budget Used</span><strong>{budgetUsed}%</strong></div>
+            <div className="topbar-status-card"><span>Live Status</span><strong>All systems active</strong></div>
+          </div>
           <div className="profile-menu" onClick={(e) => e.stopPropagation()}>
             <button className="profile-pill profile-trigger" type="button" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><div className="profile-avatar"></div><span>{user.name.split(" ")[0]}</span></button>
             {!profileOpen ? null : <div className="profile-dropdown"><div className="profile-dropdown-head"><div className="profile-avatar small">{initial}</div><div><strong>{user.name}</strong><p>{user.email}</p></div></div><div className="profile-dropdown-links"><a href="#user-account">My Profile</a><a href="#settings">Security & Settings</a><a href="#card-form">Linked Cards</a><a href="#analytical">Insights</a><button type="button" onClick={handleLogout}>{loggingOut ? "Logging out..." : "Logout"}</button></div></div>}
           </div>
         </header>
 
-        <section className="stats-row"><article className="stat-card"><p>Total Income</p><strong>{formatCurrency(prediction.income)}</strong></article><article className="stat-card"><p>Total Expense</p><strong>{formatCurrency(prediction.expense)}</strong></article><article className="stat-card"><p>Savings</p><strong>{formatCurrency(prediction.savings)}</strong></article></section>
+        <section className="stats-row"><article className="stat-card"><p>Total Income</p><strong>{formatCurrency(prediction.income)}</strong><span className="stat-note">Primary monthly inflow across your saved records</span></article><article className="stat-card"><p>Total Expense</p><strong>{formatCurrency(prediction.expense)}</strong><span className="stat-note">{expenseOnly.length} tracked expense entries are included in this summary</span></article><article className="stat-card"><p>Savings</p><strong>{formatCurrency(prediction.savings)}</strong><span className="stat-note">Current savings rate is {savingsRate}% based on your latest totals</span></article></section>
         <section className="dashboard-card quick-grid" id="wallet"><article className="quick-card"><div className="quick-icon">WA</div><div><p>Wallet Balance</p><strong>{formatCurrency(Math.max(prediction.savings, 0))}</strong></div></article><article className="quick-card"><div className="quick-icon">CA</div><div><p>Cards Active</p><strong>{card?.number ? "01 Linked Card" : "00 Linked Cards"}</strong></div></article><article className="quick-card"><div className="quick-icon">GO</div><div><p>Goal Progress</p><strong>76% Completed</strong></div></article></section>
-        <section className="dashboard-card chart-wrap" id="transactions"><div className="card-header two-col"><h2>Monthly Expense</h2><h2>Category Wise Expense</h2></div><div className="chart-grid"><div className="line-chart"><div className="y-axis"><span>PKR 35,000</span><span>PKR 30,000</span><span>PKR 25,000</span><span>PKR 20,000</span><span>PKR 10,000</span></div><div className="line-chart-stack"><div className="chart-metrics"><div className="chart-metric-card"><span>Projected</span><strong>{formatCurrency(prediction.projectedExpense)}</strong></div><div className="chart-metric-card"><span>Possible Save</span><strong>{formatCurrency(prediction.possibleSaving)}</strong></div><div className="chart-metric-card"><span>Top Category</span><strong>{prediction.topCategory}</strong></div></div><div className="plot-area"><div className="chart-summary-pill"><span>Current Spend</span><strong>{formatCurrency(prediction.expense)}</strong></div><svg viewBox="0 0 600 260" preserveAspectRatio="none"><defs><linearGradient id="expenseAreaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4a87ff" stopOpacity="0.3"></stop><stop offset="100%" stopColor="#4a87ff" stopOpacity="0.02"></stop></linearGradient></defs><path className="area-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110 L590 260 L20 260 Z" /><path className="line-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110" /><g className="point-group">{monthlySeries.map((point, index) => <g key={point.label}><circle cx={point.x} cy={point.y} r={index === monthlySeries.length - 1 ? 6 : 5}></circle><text className="point-value-label" x={point.x} y={point.y - 14}>{Math.round(point.value / 1000)}k</text></g>)}</g></svg><div className="x-axis">{monthlySeries.map((point) => <span key={point.label}>{point.label}</span>)}</div></div><div className="mini-compare-chart"><div className="mini-compare-head"><span>Monthly Compare</span><strong>Spent vs Target</strong></div><div className="mini-bars">{monthlySeries.map((point, index) => <div className="mini-bar-col" key={point.label}><div className="mini-bar-track"><div className={`mini-bar-fill ${index >= monthlySeries.length - 2 ? "mini-bar-fill-accent" : ""}`} style={{ height: `${Math.max(24, Math.round((point.value / 32000) * 100))}%` }}></div></div><small>{point.label}</small></div>)}</div></div></div></div><div className="category-chart-wrap"><div className="category-chart-card"><div className="category-chart-top"><span>Top Categories</span><strong>Expense Split</strong></div><div className="category-bars"><div className="category-bar-card"><div className="category-bar-head"><span>Food</span><strong>37%</strong></div><div className="category-track"><div className="category-fill blue-fill" style={{ width: "88%" }}></div></div><small>Dining, groceries, cafe</small></div><div className="category-bar-card"><div className="category-bar-head"><span>Transport</span><strong>23%</strong></div><div className="category-track"><div className="category-fill red-fill" style={{ width: "62%" }}></div></div><small>Fuel and ride costs</small></div><div className="category-bar-card"><div className="category-bar-head"><span>Utilities</span><strong>22%</strong></div><div className="category-track"><div className="category-fill green-fill" style={{ width: "58%" }}></div></div><small>Bills and monthly services</small></div></div></div><div className="category-summary">{comparisonSeries.map((item) => <div className="legend-item comparison-legend-item" key={item.label}><div><strong>{item.label}</strong><span>{formatCurrency(item.spent)} spent from {formatCurrency(item.budget)} budget</span></div><span className={`comparison-badge ${item.color}`}>{Math.round((item.spent / item.budget) * 100)}%</span></div>)}</div></div></div></section>        <section className="dashboard-card bars-card" id="reports"><div className="card-header section-inline"><div><h2>Budget vs. Spending Report</h2><p className="report-subtext">Download a full finance summary based on your current dashboard data.</p></div><button className="btn btn-primary report-download-btn" type="button" onClick={downloadReport}>Download Report</button></div><div className="double-panels"><div className="budget-panel"><h2>Budget vs. Spending</h2><div className="hbar-group"><span>Transportation</span><div className="bar-track"><div className="fill red-fill" style={{ width: "58%" }}></div></div></div><div className="hbar-group"><span>Food</span><div className="bar-track"><div className="fill green-fill" style={{ width: "84%" }}></div></div></div><div className="range-labels"><span>0</span><span>PKR 5,000</span><span>PKR 20,000</span></div></div><div className="budget-panel"><h2>Budget vs. Spending</h2><div className="hbar-group"><span>Transportation</span><div className="bar-track"><div className="fill red-fill" style={{ width: "70%" }}></div></div></div><div className="hbar-group"><span>Food</span><div className="bar-track"><div className="fill green-fill" style={{ width: "92%" }}></div></div></div><div className="range-labels"><span>PKR</span><span>PKR 15,000</span><span>PKR 20,000</span></div></div></div></section>        <section className="dashboard-split"><section className="dashboard-card transaction-panel"><div className="card-header section-inline"><h2>Recent Transactions</h2><a className="view-link" href="#transactions">View All</a></div><div className="transaction-list">{expenses.map((item, index) => <article className={`transaction-item ${index === 0 && flashFirst ? "flash-new" : ""}`} key={`${item.title}-${item.date}-${index}`}><div className="transaction-main"><span className="transaction-icon">{item.icon}</span><div><strong>{item.title}</strong><p>{item.category}</p></div></div><div className="transaction-meta"><span>{item.date}</span><strong className={item.type === "income" ? "positive" : "negative"}>{item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}</strong></div></article>)}</div></section><section className="dashboard-card ai-panel" id="analytical"><div className="card-header section-inline"><h2>AI Features</h2><span className="ai-pill">Smart Analysis</span></div><div className="insight-list"><article className="insight-card"><div className="insight-icon">SI</div><div><strong>Spending Trend</strong><p>Your spending has increased by 8.2% compared to last month. Focus on dining out expenses.</p></div></article><article className="insight-card"><div className="insight-icon">BA</div><div><strong>Budget Alert</strong><p>You've reached 82% of your monthly food budget. Only PKR 27.21 left for the rest of the month.</p></div></article><article className="insight-card"><div className="insight-icon">SG</div><div><strong>Savings Goal</strong><p>Keep up the pace! You're on track to save PKR 1,200 this month. Great job!</p></div></article><article className="insight-card"><div className="insight-icon">IO</div><div><strong>Income Opportunity</strong><p>Your average income is growing. Consider this for budgeting next quarter.</p></div></article></div></section></section>        <section className="dashboard-split"><section className="dashboard-card manual-entry-panel"><div className="card-header section-inline"><h2>Manual Expense Add</h2><span className="status-badge light">Live Update</span></div><form className="expense-form" onSubmit={saveExpense}><label>Expense Title<input value={expenseForm.title} onChange={(e) => setExpenseForm((s) => ({ ...s, title: e.target.value }))} type="text" required /></label><label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((s) => ({ ...s, category: e.target.value }))}><option>Food</option><option>Utilities</option><option>Transportation</option><option>Shopping</option><option>Health</option><option>Other</option></select></label><label>Date<input value={expenseForm.date} onChange={(e) => setExpenseForm((s) => ({ ...s, date: e.target.value }))} type="date" required /></label><label>Amount<input value={expenseForm.amount} onChange={(e) => setExpenseForm((s) => ({ ...s, amount: e.target.value }))} type="number" min="1" step="0.01" required /></label><button className="btn btn-primary auth-submit" type="submit">Add Expense</button></form></section><section className="dashboard-card account-panel"><div className="card-header section-inline"><h2>Quick Note</h2><span className="ai-pill">Manual Tracking</span></div><div className="account-grid single-column"><div className="account-box"><p>How it works</p><strong>New expense recent transactions list ke top par add hoga.</strong></div><div className="account-box"><p>Auto update</p><strong>Total Expense aur Savings amount turant refresh ho jayegi.</strong></div></div></section></section>
+        <section className="dashboard-card chart-wrap" id="transactions"><div className="card-header two-col"><div><h2>Monthly Expense</h2><p className="section-copy">Track your current spending curve, projected total, and top category pressure in one view.</p></div><div><h2>Category Wise Expense</h2><p className="section-copy">Live split of your most expensive categories based on current saved records.</p></div></div><div className="chart-grid"><div className="line-chart"><div className="y-axis"><span>PKR 35,000</span><span>PKR 30,000</span><span>PKR 25,000</span><span>PKR 20,000</span><span>PKR 10,000</span></div><div className="line-chart-stack"><div className="chart-metrics"><div className="chart-metric-card"><span>Projected</span><strong>{formatCurrency(prediction.projectedExpense)}</strong></div><div className="chart-metric-card"><span>Possible Save</span><strong>{formatCurrency(prediction.possibleSaving)}</strong></div><div className="chart-metric-card"><span>Top Category</span><strong>{prediction.topCategory}</strong></div></div><div className="plot-area"><div className="chart-summary-pill"><span>Current Spend</span><strong>{formatCurrency(prediction.expense)}</strong></div><svg viewBox="0 0 600 260" preserveAspectRatio="none"><defs><linearGradient id="expenseAreaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4a87ff" stopOpacity="0.3"></stop><stop offset="100%" stopColor="#4a87ff" stopOpacity="0.02"></stop></linearGradient></defs><path className="area-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110 L590 260 L20 260 Z" /><path className="line-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110" /><g className="point-group">{monthlySeries.map((point, index) => <g key={point.label}><circle cx={point.x} cy={point.y} r={index === monthlySeries.length - 1 ? 6 : 5}></circle><text className="point-value-label" x={point.x} y={point.y - 14}>{Math.round(point.value / 1000)}k</text></g>)}</g></svg><div className="x-axis">{monthlySeries.map((point) => <span key={point.label}>{point.label}</span>)}</div></div><div className="mini-compare-chart"><div className="mini-compare-head"><span>Monthly Compare</span><strong>Spent vs Target</strong></div><div className="mini-bars">{monthlySeries.map((point, index) => <div className="mini-bar-col" key={point.label}><div className="mini-bar-track"><div className={`mini-bar-fill ${index >= monthlySeries.length - 2 ? "mini-bar-fill-accent" : ""}`} style={{ height: `${Math.max(24, Math.round((point.value / 32000) * 100))}%` }}></div></div><small>{point.label}</small></div>)}</div></div></div></div><div className="category-chart-wrap"><div className="category-chart-card"><div className="category-chart-top"><span>Top Categories</span><strong>Expense Split</strong></div><div className="category-bars">{categoryOverview.map((item) => <div className="category-bar-card" key={item.label}><div className="category-bar-head"><span>{item.label}</span><strong>{item.percent}%</strong></div><div className="category-track"><div className={`category-fill ${item.color}`} style={{ width: `${item.width}%` }}></div></div><small>{item.note}</small></div>)}</div></div><div className="category-summary">{categoryOverview.map((item) => <div className="legend-item comparison-legend-item" key={item.label}><div><strong>{item.label}</strong><span>{formatCurrency(item.spent)} spent from {formatCurrency(item.budget)} budget</span></div><span className={`comparison-badge ${item.color}`}>{Math.round((item.spent / item.budget) * 100)}%</span></div>)}</div></div></div></section>
+        <section className="dashboard-card bars-card" id="reports"><div className="card-header section-inline"><div><h2>Budget vs. Spending Report</h2><p className="report-subtext">Download a full finance summary based on your current dashboard data.</p></div><button className="btn btn-primary report-download-btn" type="button" onClick={downloadReport}>Download Report</button></div><div className="report-highlight-grid"><div className="report-highlight-card"><span>Safe Spending Target</span><strong>{formatCurrency(prediction.safeBudget)}</strong><p>Recommended ceiling if you want better savings control next month.</p></div><div className="report-highlight-card"><span>Category Pressure</span><strong>{prediction.topCategory}</strong><p>{prediction.topCategory} is currently the category to watch most closely.</p></div><div className="report-highlight-card"><span>Goal Window</span><strong>{formatCurrency(prediction.possibleSaving)}</strong><p>Possible amount you can protect by reducing low-priority expenses.</p></div></div><div className="report-export-strip"><div className="report-export-card"><strong>TXT Export</strong><span>Fast summary for viva and quick review</span></div><div className="report-export-card"><strong>Live Finance Snapshot</strong><span>Includes totals, top category, and recent transactions</span></div><div className="report-export-card"><strong>Submission Friendly</strong><span>Simple printable output with PKR values</span></div></div><div className="double-panels">{categoryOverview.map((item) => <div className="budget-panel" key={item.label}><h2>{item.label} Budget vs. Spending</h2><div className="hbar-group"><span>Spent</span><div className="bar-track"><div className={`fill ${item.color}`} style={{ width: `${Math.min(100, Math.round((item.spent / item.budget) * 100))}%` }}></div></div></div><div className="hbar-group"><span>Remaining</span><div className="bar-track"><div className="fill neutral-fill" style={{ width: `${Math.max(8, 100 - Math.round((item.spent / item.budget) * 100))}%` }}></div></div></div><div className="range-labels"><span>{formatCurrency(0)}</span><span>{formatCurrency(item.budget / 2)}</span><span>{formatCurrency(item.budget)}</span></div></div>)}</div></section>
+        <section className="dashboard-split"><section className="dashboard-card transaction-panel"><div className="card-header section-inline"><div><h2>Recent Transactions</h2><p className="section-copy">Your latest income and expense records update the dashboard instantly.</p></div><a className="view-link" href="#transactions">View All</a></div><div className="transaction-list">{recentTransactions.map((item, index) => <article className={`transaction-item ${index === 0 && flashFirst ? "flash-new" : ""}`} key={`${item.title}-${item.date}-${index}`}><div className="transaction-main"><span className="transaction-icon">{item.icon}</span><div><strong>{item.title}</strong><p>{item.category}</p></div></div><div className="transaction-side"><div className="transaction-meta"><span>{item.date}</span><strong className={item.type === "income" ? "positive" : "negative"}>{item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}</strong></div>{item.type === "income" ? null : <div className="transaction-actions"><button type="button" className="table-action-btn" onClick={() => editTransaction(index)}>Edit</button><button type="button" className="table-action-btn danger" onClick={() => deleteTransaction(index)}>Delete</button></div>}</div></article>)}</div></section><section className="dashboard-card ai-panel" id="analytical"><div className="card-header section-inline"><div><h2>AI Features</h2><p className="section-copy">Auto-generated coaching based on your current profile, budget trend, and saved records.</p></div><span className="ai-pill">Smart Analysis</span></div><div className="insight-list">{insightCards.map((item) => <article className="insight-card" key={item.title}><div className="insight-icon">{item.icon}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}</div></section></section>
+        <section className="dashboard-split"><section className="dashboard-card manual-entry-panel" id="manual-expense"><div className="card-header section-inline"><div><h2>{editingTransaction !== null ? "Edit Expense" : "Manual Expense Add"}</h2><p className="section-copy">Add a new expense record and instantly update totals, transactions, and prediction values.</p></div><span className="status-badge light">{editingTransaction !== null ? "Edit Mode" : "Live Update"}</span></div><form className="expense-form" onSubmit={saveExpense}><label>Expense Title<input value={expenseForm.title} onChange={(e) => setExpenseForm((s) => ({ ...s, title: e.target.value }))} type="text" required /></label><label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((s) => ({ ...s, category: e.target.value }))}><option>Food</option><option>Utilities</option><option>Transportation</option><option>Shopping</option><option>Health</option><option>Other</option></select></label><label>Date<input value={expenseForm.date} onChange={(e) => setExpenseForm((s) => ({ ...s, date: e.target.value }))} type="date" required /></label><label>Amount<input value={expenseForm.amount} onChange={(e) => setExpenseForm((s) => ({ ...s, amount: e.target.value }))} type="number" min="1" step="0.01" required /></label><div className="expense-form-actions"><button className="btn btn-primary auth-submit" type="submit">{editingTransaction !== null ? "Update Expense" : "Add Expense"}</button>{editingTransaction !== null ? <button className="btn btn-finance-ghost" type="button" onClick={() => { setEditingTransaction(null); setExpenseForm({ title: "", category: "Food", date: "", amount: "" }); }}>Cancel</button> : null}</div></form></section><section className="dashboard-card account-panel"><div className="card-header section-inline"><h2>Quick Note</h2><span className="ai-pill">Manual Tracking</span></div><div className="account-grid single-column"><div className="account-box"><p>How it works</p><strong>New expense recent transactions list ke top par add hoga.</strong></div><div className="account-box"><p>Auto update</p><strong>Total Expense aur Savings amount turant refresh ho jayegi.</strong></div><div className="account-box"><p>Planner note</p><strong>Try to keep monthly spending near {formatCurrency(prediction.safeBudget)} for a healthier savings ratio.</strong></div></div></section></section>
+        <section className="dashboard-split">
+          <section className="dashboard-card planner-panel">
+            <div className="card-header section-inline"><div><h2>Budget Planner</h2><p className="section-copy">Category-level guidance to keep spending inside a healthier monthly budget range.</p></div><span className="status-badge light">Planner</span></div>
+            <div className="planner-list">
+              {plannerRows.map((item) => <article className="planner-row" key={item.label}><div className="planner-main"><strong>{item.label}</strong><span>{formatCurrency(item.spent)} used from {formatCurrency(item.budget)}</span></div><div className="planner-track"><div className={`planner-fill ${item.color}`} style={{ width: `${item.utilization}%` }}></div></div><div className="planner-meta"><span>{item.utilization}% used</span><strong>{item.recommendation}</strong></div></article>)}
+            </div>
+          </section>
+          <section className="dashboard-card wallet-snapshot-panel">
+            <div className="card-header section-inline"><div><h2>Wallet Snapshot</h2><p className="section-copy">Quick finance health summary based on your latest records, reports, and card setup.</p></div><span className="status-badge">Stable</span></div>
+            <div className="wallet-health-grid">
+              {walletHealthCards.map((item) => <div className="wallet-health-card" key={item.title}><p>{item.title}</p><strong>{item.value}</strong><span>{item.note}</span></div>)}
+            </div>
+          </section>
+        </section>
+        <section className="dashboard-split">
+          <section className="dashboard-card upcoming-panel">
+            <div className="card-header section-inline"><div><h2>Upcoming Bills</h2><p className="section-copy">Simple planner view for routine payments and scheduled outgoing amounts.</p></div><span className="ai-pill">Due List</span></div>
+            <div className="upcoming-list">
+              {upcomingBills.map((item) => <article className="upcoming-item" key={item.label}><div><strong>{item.label}</strong><p>{item.due}</p></div><div className="upcoming-meta"><span>{item.status}</span><strong>{item.amount}</strong></div></article>)}
+            </div>
+          </section>
+          <section className="dashboard-card account-panel">
+            <div className="card-header section-inline"><h2>Financial Targets</h2><span className="status-badge light">On Track</span></div>
+            <div className="account-grid single-column">
+              <div className="account-box"><p>Monthly Savings Target</p><strong>{formatCurrency(Math.max(prediction.possibleSaving, 1200))}</strong></div>
+              <div className="account-box"><p>Recommended Expense Cap</p><strong>{formatCurrency(prediction.safeBudget)}</strong></div>
+              <div className="account-box"><p>Focus Category</p><strong>{prediction.topCategory} should stay below {formatCurrency(prediction.topCategoryAmount * 0.9)}</strong></div>
+            </div>
+          </section>
+        </section>
         <section className="dashboard-split account-section-wrap"><section className="dashboard-card account-panel" id="user-account"><div className="card-header section-inline"><h2>User Account</h2><span className="status-badge">Verified</span></div><div className="profile-banner"><div className="profile-summary"><div className="profile-avatar large">{initial}</div><div><h3>{user.name}</h3><p>{user.email}</p><span className="mini-status">Premium Member since {user.memberSince}</span></div></div><div className="security-chip">2-Step Verification Active</div></div><div className="account-grid"><div className="account-box"><p>Phone Number</p><strong>{user.phone}</strong></div><div className="account-box"><p>CNIC / ID</p><strong>{user.cnic}</strong></div><div className="account-box"><p>Address</p><strong>{user.address}</strong></div><div className="account-box"><p>Last Login</p><strong>{user.lastLogin}</strong></div></div><div className="detail-grid"><div className="detail-card"><h3>Profile Details</h3><div className="detail-line"><span>Full Name</span><strong>{user.name}</strong></div><div className="detail-line"><span>Date of Birth</span><strong>{user.dob}</strong></div><div className="detail-line"><span>Occupation</span><strong>{user.occupation}</strong></div><div className="detail-line"><span>Preferred Currency</span><strong>{user.currency}</strong></div></div><div className="detail-card"><h3>Account Security</h3><div className="detail-line"><span>Password Status</span><strong>Updated 10 days ago</strong></div><div className="detail-line"><span>Recovery Email</span><strong>backup@aifinance.com</strong></div><div className="detail-line"><span>Device Trust</span><strong>3 trusted devices</strong></div><div className="detail-line"><span>Security Score</span><strong>92 / 100</strong></div></div><div className="detail-card"><h3>Preferences</h3><div className="detail-line"><span>Language</span><strong>{user.language}</strong></div><div className="detail-line"><span>Alerts</span><strong>Enabled</strong></div><div className="detail-line"><span>Weekly Reports</span><strong>Every Sunday</strong></div><div className="detail-line"><span>Theme</span><strong>Light Dashboard</strong></div></div></div><div className="account-edit-panel"><div className="card-header section-inline"><h3>Edit Profile</h3><span className="status-badge light">Saved Locally</span></div><form className="expense-form profile-form" onSubmit={saveProfile}><label>Full Name<input value={profileForm.name} onChange={(e) => setProfileForm((s) => ({ ...s, name: e.target.value }))} type="text" /></label><label>Email<input value={profileForm.email} onChange={(e) => setProfileForm((s) => ({ ...s, email: e.target.value }))} type="email" /></label><label>Phone Number<input value={profileForm.phone} onChange={(e) => setProfileForm((s) => ({ ...s, phone: e.target.value }))} type="text" /></label><label>CNIC / ID<input value={profileForm.cnic} onChange={(e) => setProfileForm((s) => ({ ...s, cnic: e.target.value }))} type="text" /></label><label>Address<input value={profileForm.address} onChange={(e) => setProfileForm((s) => ({ ...s, address: e.target.value }))} type="text" /></label><label>Occupation<input value={profileForm.occupation} onChange={(e) => setProfileForm((s) => ({ ...s, occupation: e.target.value }))} type="text" /></label><label>Date of Birth<input value={profileForm.dob} onChange={(e) => setProfileForm((s) => ({ ...s, dob: e.target.value }))} type="text" /></label><label>Language<input value={profileForm.language} onChange={(e) => setProfileForm((s) => ({ ...s, language: e.target.value }))} type="text" /></label><button className="btn btn-primary auth-submit" type="submit">Save Profile</button></form></div></section><div className="settings-stack"><section className="dashboard-card settings-panel" id="settings"><div className="card-header section-inline"><h2>Settings</h2><span className="status-badge light">Updated</span></div><div className="settings-list"><div className="setting-row"><span>Email Notifications</span><button className={`toggle-btn ${settings.emailNotifications ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, emailNotifications: !current.emailNotifications }))}>{settings.emailNotifications ? "On" : "Off"}</button></div><div className="setting-row"><span>Monthly Budget Alerts</span><button className={`toggle-btn ${settings.budgetAlerts ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, budgetAlerts: !current.budgetAlerts }))}>{settings.budgetAlerts ? "On" : "Off"}</button></div><div className="setting-row"><span>Dark Summary Reports</span><button className={`toggle-btn ${settings.darkReports ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, darkReports: !current.darkReports }))}>{settings.darkReports ? "On" : "Off"}</button></div></div><div className="settings-security"><div className="security-item"><span>Login Alerts</span><strong>Enabled for every new device</strong></div><div className="security-item"><span>Data Privacy</span><strong>Account info stays masked in card preview</strong></div></div></section><section className="dashboard-card settings-panel settings-support-card"><div className="card-header section-inline"><h2>Security Status</h2><span className="status-badge">Protected</span></div><div className="account-grid single-column"><div className="account-box"><p>Trusted Device</p><strong>This browser session is marked as secure.</strong></div><div className="account-box"><p>Backup Reminder</p><strong>Review profile, card details, and downloaded reports weekly.</strong></div><div className="account-box"><p>Quick Help</p><strong>Keep budget alerts on and update your password regularly for safer usage.</strong></div></div></section></div></section>
-        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><h2>Add ATM / Debit Card</h2><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<input value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} type="text" placeholder="Example: HBL, Meezan, UBL" required /></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: e.target.value }))} type="text" placeholder="54000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, expiry MM/YY, and CVV 3 digits rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card"><div className="atm-card-top"><div><span>{card.bank || "AI Personal Finance"}</span><strong>Debit Card</strong></div><span className="atm-network">VISA</span></div><div className="atm-chip"></div><strong>{card.number}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{card.holder}</strong></div><div><span>Expiry</span><strong>{card.expiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank}</strong></div><div className="account-box"><p>Security</p><strong>Masked and encrypted preview</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.bank} card added with masked number and profile binding</strong></div><div className="security-item"><span>CVV Storage</span><strong>CVV hidden ({card.cvvMasked}) and protected for secure preview only</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div></div></section></section>
+        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><div><h2>Add ATM / Debit Card</h2><p className="section-copy">Type card details below and watch the secure preview, brand type, and security checks update in real time.</p></div><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><div className="card-live-preview"><div className="card-live-head"><strong>Live card readiness</strong><span>{cardCompletion}% complete</span></div><div className="card-progress-track"><div className="card-progress-fill" style={{ width: `${cardCompletion}%` }}></div></div><div className="card-checklist">{cardChecks.map((item) => <div className={`card-check-item ${item.passed ? "passed" : ""}`} key={item.label}><span>{item.passed ? "OK" : ".."}</span><strong>{item.label}</strong></div>)}</div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<select value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} required><option value="">Select bank</option>{bankOptions.map((bank) => <option key={bank} value={bank}>{bank}</option>)}</select></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: onlyDigits(e.target.value).slice(0, 6) }))} type="text" inputMode="numeric" placeholder="54000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, valid MM/YY expiry, secure CVV, and billing ZIP complete rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card atm-card-preview"><div className="atm-card-top"><div><span>{liveCardBank}</span><strong>Debit Card</strong></div><span className="atm-network">{liveCardBrand}</span></div><div className="atm-chip"></div><strong>{liveCardNumber}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{liveCardHolder}</strong></div><div><span>Expiry</span><strong>{liveCardExpiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank}</strong></div><div className="account-box"><p>Security</p><strong>Masked and encrypted preview</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.bank} card added with masked number and profile binding</strong></div><div className="security-item"><span>CVV Storage</span><strong>CVV hidden ({card.cvvMasked}) and protected for secure preview only</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div><div className="security-item"><span>Brand Detection</span><strong>{card.brand || "Secure"} network identified with live number pattern check</strong></div></div></section></section>
         <div className="floating-chatbot">
           {chatbotOpen ? (
             <div className="chatbot-widget">
@@ -982,7 +1324,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
                   <span className="chatbot-brand-icon">AI</span>
                   <div>
                     <strong>AI Finance Chatbot</strong>
-                    <p>Predict expense, savings, and budget</p>
+                    <p>{chatbotStatus} for expense, savings, and budget guidance</p>
                   </div>
                 </div>
                 <div className="chatbot-head-controls">
@@ -1031,6 +1373,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
             {unreadCount > 0 ? <span className="chatbot-badge">{unreadCount}</span> : null}
           </button>
         </div>
+        {toast ? <div className={`dashboard-toast ${toast.type}`}>{toast.message}</div> : null}
       </main>
     </div>
   );

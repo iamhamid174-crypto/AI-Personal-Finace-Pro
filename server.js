@@ -5,12 +5,15 @@ const crypto = require("crypto");
 const { URL } = require("url");
 
 const PORT = Number(process.env.PORT || 3001);
+const NODE_ENV = process.env.NODE_ENV || "development";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, "data");
 const DB_FILE = path.join(DATA_DIR, "app-db.json");
 const SESSION_COOKIE = "ai_finance_session";
+const isProduction = NODE_ENV === "production";
+const rateLimitStore = new Map();
 
 const OPENAI_SYSTEM_PROMPT = `You are an AI personal finance predictor and assistant inside an AI Personal Finance web app.
 
@@ -126,12 +129,61 @@ const readBody = (req) =>
     req.on("error", reject);
   });
 
+const parseJsonBody = async (req) => {
+  const raw = await readBody(req);
+  try {
+    return JSON.parse(raw || "{}");
+  } catch {
+    throw new Error("Invalid JSON payload");
+  }
+};
+
+const sanitizeText = (value, max = 160) =>
+  String(value || "")
+    .replace(/[<>]/g, "")
+    .trim()
+    .slice(0, max);
+
+const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const applySecurityHeaders = (res) => ({
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
+  "Cache-Control": "no-store",
+});
+
+const getAllowedOrigin = (req) => {
+  const origin = req.headers.origin;
+  if (!origin) return "*";
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) return origin;
+  return "null";
+};
+
+const hitRateLimit = (key, limit, windowMs) => {
+  const now = Date.now();
+  const entry = rateLimitStore.get(key) || { count: 0, resetAt: now + windowMs };
+  if (entry.resetAt <= now) {
+    entry.count = 0;
+    entry.resetAt = now + windowMs;
+  }
+  entry.count += 1;
+  rateLimitStore.set(key, entry);
+  return entry.count > limit;
+};
+
 const sendJson = (res, statusCode, payload, extraHeaders = {}) => {
+  const allowedOrigin = extraHeaders["Access-Control-Allow-Origin"] || "*";
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+    ...(allowedOrigin !== "*" ? { "Access-Control-Allow-Credentials": "true" } : {}),
+    ...applySecurityHeaders(res),
     ...extraHeaders,
   });
   res.end(JSON.stringify(payload));
@@ -277,28 +329,29 @@ const askOpenAI = async (message, payload) => {
 };
 
 const setSessionCookie = (res, token) => {
-  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}`;
+  const secureFlag = isProduction ? "; Secure" : "";
+  const cookie = `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}${secureFlag}`;
   return { "Set-Cookie": cookie };
 };
 
 const clearSessionCookie = () => ({
-  "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`,
+  "Set-Cookie": `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Strict; Max-Age=0${isProduction ? "; Secure" : ""}`,
 });
 
 const handleAuthSignup = async (req, res) => {
-  const body = JSON.parse((await readBody(req)) || "{}");
-  const name = String(body.name || "").trim();
-  const email = String(body.email || "").trim().toLowerCase();
+  const body = await parseJsonBody(req);
+  const name = sanitizeText(body.name, 80);
+  const email = sanitizeText(body.email, 120).toLowerCase();
   const password = String(body.password || "");
 
-  if (!name || !email || password.length < 6) {
-    sendJson(res, 400, { ok: false, error: "Name, email, and a 6+ character password are required." });
+  if (!name || !validateEmail(email) || password.length < 8) {
+    sendJson(res, 400, { ok: false, error: "Name, valid email, and an 8+ character password are required." }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
 
   const db = readDb();
   if (db.users.some((item) => item.email === email)) {
-    sendJson(res, 409, { ok: false, error: "An account with this email already exists." });
+    sendJson(res, 409, { ok: false, error: "An account with this email already exists." }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
 
@@ -320,19 +373,19 @@ const handleAuthSignup = async (req, res) => {
     res,
     201,
     { ok: true, user: sanitizeUser(userRecord), data: userRecord.data },
-    setSessionCookie(res, token),
+    { ...setSessionCookie(res, token), "Access-Control-Allow-Origin": getAllowedOrigin(req) },
   );
 };
 
 const handleAuthLogin = async (req, res) => {
-  const body = JSON.parse((await readBody(req)) || "{}");
-  const email = String(body.email || "").trim().toLowerCase();
+  const body = await parseJsonBody(req);
+  const email = sanitizeText(body.email, 120).toLowerCase();
   const password = String(body.password || "");
   const db = readDb();
   const user = db.users.find((item) => item.email === email);
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    sendJson(res, 401, { ok: false, error: "Invalid email or password." });
+    sendJson(res, 401, { ok: false, error: "Invalid email or password." }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
 
@@ -341,13 +394,13 @@ const handleAuthLogin = async (req, res) => {
   const token = createSession(db, user.id);
   writeDb(db);
 
-  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data }, setSessionCookie(res, token));
+  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data }, { ...setSessionCookie(res, token), "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const handleAuthGoogle = async (req, res) => {
-  const body = JSON.parse((await readBody(req)) || "{}");
-  const name = String(body.name || "Google User").trim();
-  const email = String(body.email || "googleuser@aifinance.com").trim().toLowerCase();
+  const body = await parseJsonBody(req);
+  const name = sanitizeText(body.name || "Google User", 80);
+  const email = sanitizeText(body.email || "googleuser@aifinance.com", 120).toLowerCase();
   const db = readDb();
   let user = db.users.find((item) => item.email === email);
 
@@ -367,7 +420,7 @@ const handleAuthGoogle = async (req, res) => {
 
   const token = createSession(db, user.id);
   writeDb(db);
-  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data }, setSessionCookie(res, token));
+  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data }, { ...setSessionCookie(res, token), "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const handleAuthLogout = (req, res) => {
@@ -376,27 +429,27 @@ const handleAuthLogout = (req, res) => {
   const token = cookies[SESSION_COOKIE];
   db.sessions = db.sessions.filter((session) => session.token !== token);
   writeDb(db);
-  sendJson(res, 200, { ok: true }, clearSessionCookie());
+  sendJson(res, 200, { ok: true }, { ...clearSessionCookie(), "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const handleAuthMe = (req, res) => {
   const db = readDb();
   const user = getSessionUser(req, db);
   if (!user) {
-    sendJson(res, 401, { ok: false, error: "Not authenticated" });
+    sendJson(res, 401, { ok: false, error: "Not authenticated" }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
-  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data });
+  sendJson(res, 200, { ok: true, user: sanitizeUser(user), data: user.data }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const handleGetData = (req, res) => {
   const db = readDb();
   const user = getSessionUser(req, db);
   if (!user) {
-    sendJson(res, 401, { ok: false, error: "Not authenticated" });
+    sendJson(res, 401, { ok: false, error: "Not authenticated" }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
-  sendJson(res, 200, { ok: true, data: user.data });
+  sendJson(res, 200, { ok: true, data: user.data }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const normalizeClientData = (payload, fallbackProfile) => ({
@@ -417,32 +470,43 @@ const handlePutData = async (req, res) => {
   const db = readDb();
   const user = getSessionUser(req, db);
   if (!user) {
-    sendJson(res, 401, { ok: false, error: "Not authenticated" });
+    sendJson(res, 401, { ok: false, error: "Not authenticated" }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
     return;
   }
 
-  const body = JSON.parse((await readBody(req)) || "{}");
+  const body = await parseJsonBody(req);
   user.data = normalizeClientData(body, user.profile);
   user.profile = { ...user.profile, ...user.data.user, currency: "PKR" };
   user.data.user = user.profile;
   writeDb(db);
-  sendJson(res, 200, { ok: true, data: user.data });
+  sendJson(res, 200, { ok: true, data: user.data }, { "Access-Control-Allow-Origin": getAllowedOrigin(req) });
 };
 
 const server = http.createServer(async (req, res) => {
   const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+  const requestIp = req.socket.remoteAddress || "local";
+  const allowedOrigin = getAllowedOrigin(req);
 
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
+      ...(allowedOrigin !== "*" ? { "Access-Control-Allow-Credentials": "true" } : {}),
+      ...applySecurityHeaders(res),
     });
     res.end();
     return;
   }
 
   try {
+    if ((req.method === "POST" && reqUrl.pathname.startsWith("/api/auth/")) && hitRateLimit(`auth:${requestIp}`, 18, 15 * 60 * 1000)) {
+      return void sendJson(res, 429, { ok: false, error: "Too many auth requests. Please try again shortly." }, { "Access-Control-Allow-Origin": allowedOrigin });
+    }
+    if (req.method === "POST" && reqUrl.pathname === "/api/chat" && hitRateLimit(`chat:${requestIp}`, 40, 10 * 60 * 1000)) {
+      return void sendJson(res, 429, { ok: false, error: "Too many chat requests. Please slow down for a moment." }, { "Access-Control-Allow-Origin": allowedOrigin });
+    }
+
     if (req.method === "POST" && reqUrl.pathname === "/api/auth/signup") return void (await handleAuthSignup(req, res));
     if (req.method === "POST" && reqUrl.pathname === "/api/auth/login") return void (await handleAuthLogin(req, res));
     if (req.method === "POST" && reqUrl.pathname === "/api/auth/google") return void (await handleAuthGoogle(req, res));
@@ -452,16 +516,18 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "PUT" && reqUrl.pathname === "/api/data") return void (await handlePutData(req, res));
 
     if (req.method === "POST" && reqUrl.pathname === "/api/chat") {
-      const body = await readBody(req);
-      const payload = JSON.parse(body || "{}");
-      const message = String(payload.message || "").trim();
-      if (!message) return void sendJson(res, 400, { ok: false, error: "Message is required" });
+      const db = readDb();
+      const user = getSessionUser(req, db);
+      if (!user) return void sendJson(res, 401, { ok: false, error: "Not authenticated" }, { "Access-Control-Allow-Origin": allowedOrigin });
+      const payload = await parseJsonBody(req);
+      const message = sanitizeText(payload.message, 1200);
+      if (!message) return void sendJson(res, 400, { ok: false, error: "Message is required" }, { "Access-Control-Allow-Origin": allowedOrigin });
 
       const result = await askOpenAI(message, payload);
-      return void sendJson(res, result.ok ? 200 : 500, result);
+      return void sendJson(res, result.ok ? 200 : 500, result, { "Access-Control-Allow-Origin": allowedOrigin });
     }
   } catch (error) {
-    return void sendJson(res, 500, { ok: false, error: error.message || "Server error" });
+    return void sendJson(res, 500, { ok: false, error: error.message || "Server error" }, { "Access-Control-Allow-Origin": allowedOrigin });
   }
 
   const requestedPath = reqUrl.pathname === "/" ? "/index.html" : reqUrl.pathname;
@@ -472,6 +538,10 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("Forbidden");
     return;
+  }
+
+  if (!path.extname(filePath) && !fs.existsSync(filePath)) {
+    return serveFile(res, path.join(ROOT, "index.html"));
   }
 
   serveFile(res, filePath);
