@@ -1,0 +1,7 @@
+opened=True
+frames=642
+fps=25.0
+duration=25.68
+frame_1_ok=True
+frame_2_ok=True
+frame_3_ok=True
