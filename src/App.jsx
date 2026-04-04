@@ -1,5 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
 const STORAGE_KEYS = {
   user: "ai_finance_user",
@@ -12,6 +14,7 @@ const STORAGE_KEYS = {
 const defaultUser = {
   name: "User Name",
   email: "user@aifinance.com",
+  avatar: "",
   phone: "+92 300 1234567",
   cnic: "35202-1234567-1",
   address: "Lahore, Pakistan",
@@ -38,6 +41,15 @@ const defaultCard = {
   expiry: "09/28",
   cvvMasked: "***",
   brand: "VISA",
+};
+
+const emptyCard = {
+  holder: "",
+  bank: "",
+  number: "",
+  expiry: "",
+  cvvMasked: "***",
+  brand: "Secure",
 };
 
 const defaultSettings = {
@@ -124,6 +136,11 @@ const chatbotLanguages = [
   { label: "Roman Urdu", value: "roman-ur" },
   { label: "English", value: "en-US" },
   { label: "Urdu", value: "ur-PK" },
+  { label: "Hindi", value: "hi-IN" },
+  { label: "Arabic", value: "ar-SA" },
+  { label: "Turkish", value: "tr-TR" },
+  { label: "French", value: "fr-FR" },
+  { label: "Spanish", value: "es-ES" },
 ];
 
 const bankOptions = [
@@ -252,31 +269,61 @@ function buildPrediction(expenses) {
   };
 }
 
+function buildExpenseInsights(expenses, prediction) {
+  const expenseOnly = expenses.filter((item) => item.type !== "income");
+  const totalExpense = prediction.expense || 0;
+  const avgExpense = expenseOnly.length ? totalExpense / expenseOnly.length : 0;
+  const latestExpense = expenseOnly[0] || null;
+  const categoryTotals = expenseOnly.reduce((acc, item) => {
+    acc[item.category] = (acc[item.category] || 0) + Number(item.amount);
+    return acc;
+  }, {});
+  const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const secondCategory = sortedCategories[1]?.[0] || "Utilities";
+  const topShare = totalExpense ? Math.round((prediction.topCategoryAmount / totalExpense) * 100) : 0;
+
+  return {
+    expenseOnly,
+    avgExpense,
+    latestExpense,
+    sortedCategories,
+    secondCategory,
+    topShare,
+  };
+}
+
 function buildLocalReply(message, prediction, user, expenses, settings, languageMode = "roman-ur") {
   const prompt = message.toLowerCase();
   const recentExpenseCount = expenses.filter((item) => item.type !== "income").length;
   const alerts = [];
-  const english = languageMode === "en-US";
-  const urdu = languageMode === "ur-PK";
+  const english = ["en-US", "fr-FR", "es-ES", "tr-TR"].includes(languageMode);
+  const urdu = ["ur-PK", "hi-IN", "ar-SA"].includes(languageMode);
+  const { avgExpense, latestExpense, secondCategory, topShare } = buildExpenseInsights(expenses, prediction);
 
   if (settings.budgetAlerts) alerts.push("budget alerts on hain");
   if (settings.emailNotifications) alerts.push("email notifications active hain");
 
   if (english) {
+    if (/summary|status|overview/.test(prompt)) return `Current income is ${formatCurrency(prediction.income)}, total expense is ${formatCurrency(prediction.expense)}, and savings are ${formatCurrency(prediction.savings)}. ${prediction.topCategory} is your top category at about ${topShare}% of spending.`;
     if (/save|saving/.test(prompt)) return `Based on your current pattern, you could save about ${formatCurrency(prediction.possibleSaving)} next month if you reduce ${prediction.topCategory} spending and follow a weekly limit.`;
     if (/predict|forecast|next|expense/.test(prompt)) return `Based on your latest ${recentExpenseCount} expense records, your next month expense may land around ${formatCurrency(prediction.projectedExpense)}. With tighter ${prediction.topCategory} control, you may bring it closer to ${formatCurrency(prediction.safeBudget)}.`;
     if (/category|most|highest/.test(prompt)) return `${prediction.topCategory} is currently your highest spending category at around ${formatCurrency(prediction.topCategoryAmount)}. That is the best place to cut costs first.`;
     if (/budget|plan|limit/.test(prompt)) return `A practical next-month budget would be around ${formatCurrency(prediction.safeBudget)}. Set a strict cap for ${prediction.topCategory} and review spending weekly.`;
+    if (/recent|last|latest/.test(prompt)) return latestExpense ? `Your latest tracked expense is "${latestExpense.title}" in ${latestExpense.category} for ${formatCurrency(latestExpense.amount)} on ${latestExpense.date}. Average expense entry is around ${formatCurrency(avgExpense)}.` : `You do not have a recent expense yet. Add a few transactions and I can summarize them for you.`;
+    if (/advice|improve|reduce/.test(prompt)) return `Best improvement point is ${prediction.topCategory}, then ${secondCategory}. Try reducing ${prediction.topCategory} by about 10% and keep total spending near ${formatCurrency(prediction.safeBudget)} for a better savings result.`;
     if (/settings|alerts|notification/.test(prompt)) return `Your current app setup shows ${alerts.join(" and ") || "basic alerts turned off"}. Keeping budget alerts on will help your predictions stay useful.`;
     if (/hello|hi/.test(prompt)) return `Hi ${user.name}. I'm your finance predictor chatbot. You can ask me about next month expense, savings, budget planning, or your top spending category.`;
     return `Your current total expense is ${formatCurrency(prediction.expense)} and your projected next month expense is around ${formatCurrency(prediction.projectedExpense)}.`;
   }
 
   if (urdu) {
+    if (/summary|status|overview|khulasa|summary/.test(prompt)) return `Aap ki current income ${formatCurrency(prediction.income)}, total expense ${formatCurrency(prediction.expense)}, aur savings ${formatCurrency(prediction.savings)} hain. ${prediction.topCategory} sab se badi category hai jo taqreeban ${topShare}% spending leti hai.`;
     if (/save|saving|bacha/.test(prompt)) return `Aap ke current pattern ke mutabiq agar aap ${prediction.topCategory} category ko kam karein to aglay mahinay takreeban ${formatCurrency(prediction.possibleSaving)} bacha saktay hain.`;
     if (/predict|forecast|next|agla|expense/.test(prompt)) return `Aap ke recent ${recentExpenseCount} expense records ko dekh kar andaza hai ke aglay mahinay aap ka kharcha ${formatCurrency(prediction.projectedExpense)} ke qareeb ho sakta hai.`;
     if (/category|most|highest|sab se zyada/.test(prompt)) return `Filhal sab se zyada kharcha ${prediction.topCategory} category mein ho raha hai, jo taqreeban ${formatCurrency(prediction.topCategoryAmount)} hai.`;
     if (/budget|plan|limit/.test(prompt)) return `Aap ke liye ek munaasib working budget ${formatCurrency(prediction.safeBudget)} ho sakta hai. ${prediction.topCategory} par sakht limit lagana behtar rahega.`;
+    if (/recent|latest|last|akhri|recent/.test(prompt)) return latestExpense ? `Aap ka latest tracked expense "${latestExpense.title}" hai jo ${latestExpense.category} mein ${formatCurrency(latestExpense.amount)} ka tha, date ${latestExpense.date}. Average expense entry takreeban ${formatCurrency(avgExpense)} hai.` : `Abhi recent expense data maujood nahi hai. Kuch transactions add karein phir main better summary de sakta hoon.`;
+    if (/advice|improve|reduce|mashwara/.test(prompt)) return `Sab se pehle ${prediction.topCategory} aur phir ${secondCategory} ko control karna behtar rahega. Agar aap ${prediction.topCategory} ko 10% kam kar dein to savings aur budget dono improve ho saktay hain.`;
     if (/hello|hi|salam|assalam/.test(prompt)) return `Assalam o Alaikum ${user.name}. Main aap ka finance predictor chatbot hoon. Aap mujh se budget, savings aur future expenses ke bare mein pooch saktay hain.`;
     return `Aap ka mojooda total expense ${formatCurrency(prediction.expense)} hai aur aglay mahinay ka projected expense ${formatCurrency(prediction.projectedExpense)} ke qareeb hai.`;
   }
@@ -299,6 +346,16 @@ function buildLocalReply(message, prediction, user, expenses, settings, language
 
   if (/settings|alerts|notification/.test(prompt)) {
     return `Aap ki app settings ke mutabiq ${alerts.join(" aur ") || "basic alerts off hain"}. Agar aap prediction follow karna chahte hain to monthly budget alerts on rehna better hai.`;
+  }
+
+  if (/summary|status|overview|khulasa/.test(prompt)) {
+    return `Current income ${formatCurrency(prediction.income)}, total expense ${formatCurrency(prediction.expense)}, aur savings ${formatCurrency(prediction.savings)} hain. ${prediction.topCategory} top category hai aur is ka share takreeban ${topShare}% hai.`;
+  }
+
+  if (/recent|latest|last|akhri/.test(prompt)) {
+    return latestExpense
+      ? `Latest transaction "${latestExpense.title}" thi jo ${latestExpense.category} mein ${formatCurrency(latestExpense.amount)} ki record hui. Average expense entry ${formatCurrency(avgExpense)} ke qareeb hai.`
+      : `Abhi recent expense entries nahi hain. Kuch transactions add karo phir main proper summary de sakta hoon.`;
   }
 
   if (/hello|hi|salam|assalam/.test(prompt)) {
@@ -348,12 +405,20 @@ async function apiRequest(url, options = {}) {
 
 function getWelcomeChat(user, expenses) {
   const prediction = buildPrediction(expenses);
+  const hasExpenses = expenses.some((item) => item.type !== "income");
   return [
     {
       role: "bot",
-      text: `Salam ${user.name}. Main aap ka free local AI-style finance predictor hoon. Current data ke mutabiq next month projected expense ${formatCurrency(prediction.projectedExpense)} hai.`,
+      text: hasExpenses
+        ? `Salam ${user.name}. Main aap ka free local AI-style finance predictor hoon. Current data ke mutabiq next month projected expense ${formatCurrency(prediction.projectedExpense)} hai.`
+        : `Salam ${user.name}. Main aap ka finance assistant hoon. Abhi dashboard reset hai, is liye values zero hain. Aap new expenses add kar ke fresh planning start kar saktay hain.`,
     },
   ];
+}
+
+function resolveSpeechLang(languageMode) {
+  if (languageMode === "roman-ur") return "ur-PK";
+  return languageMode;
 }
 
 function App() {
@@ -451,6 +516,18 @@ function LandingPage() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   useEffect(() => {
+    AOS.init({
+      duration: 850,
+      easing: "ease-out-cubic",
+      once: true,
+      offset: 70,
+      mirror: false,
+      anchorPlacement: "top-bottom",
+    });
+    AOS.refresh();
+  }, []);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
       setHeroSlide((current) => (current + 1) % 3);
     }, 3200);
@@ -466,15 +543,15 @@ function LandingPage() {
 
   return (
     <div className="page-shell">
-      <header className="finance-nav landing-reveal landing-reveal-nav">
-        <a className="brand finance-brand" href="#home"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Predict. Track. Save.</small></span></a>
+      <header className="finance-nav landing-reveal landing-reveal-nav" data-aos="fade-down" data-aos-duration="900">
+        <a className="brand finance-brand" href="#home"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span></a>
         <nav className="nav-links finance-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#about">About</a><a href="#team">Team</a><a href="#contact">Contact</a></nav>
         <div className="nav-actions"><Link className="btn btn-finance-ghost" to="/login">Login</Link><Link className="btn btn-finance-primary" to="/login?mode=signup">Create Account</Link></div>
       </header>
 
       <main className="finance-landing">
         <section className={`finance-hero landing-reveal landing-reveal-hero hero-slide-${heroSlide}`} id="home">
-          <div className="finance-hero-copy">
+          <div className="finance-hero-copy" data-aos="fade-right" data-aos-delay="80">
             <p className="finance-tag">AI Powered Personal Finance</p>
             <h1>See where your money goes before it disappears.</h1>
             <p>Track expenses, manage cards, download reports, and chat with an AI predictor that helps you plan your next month more confidently.</p>
@@ -491,7 +568,7 @@ function LandingPage() {
               {[0, 1, 2].map((dot) => <span key={dot} className={heroSlide === dot ? "active" : ""}></span>)}
             </div>
           </div>
-          <div className="finance-hero-visual" aria-hidden="true">
+          <div className="finance-hero-visual" aria-hidden="true" data-aos="fade-left" data-aos-delay="160">
             <div className="finance-orb finance-orb-a"></div>
             <div className="finance-orb finance-orb-b"></div>
             <div className="finance-screen">
@@ -531,27 +608,27 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-strip landing-reveal landing-reveal-strip">
-          <div><strong>Expense Tracking</strong><span>Manual + categorized entries</span></div>
-          <div><strong>AI Prediction</strong><span>Future spend and saving suggestions</span></div>
-          <div><strong>Secure Access</strong><span>User, settings, cards, reports</span></div>
+        <section className="finance-strip landing-reveal landing-reveal-strip" data-aos="fade-up" data-aos-delay="80">
+          <div data-aos="fade-up" data-aos-delay="40"><strong>Expense Tracking</strong><span>Manual + categorized entries</span></div>
+          <div data-aos="fade-up" data-aos-delay="120"><strong>AI Prediction</strong><span>Future spend and saving suggestions</span></div>
+          <div data-aos="fade-up" data-aos-delay="200"><strong>Secure Access</strong><span>User, settings, cards, reports</span></div>
         </section>
 
-        <section className="finance-section landing-reveal landing-reveal-section" id="features">
-          <div className="finance-section-head">
+        <section className="finance-section landing-reveal landing-reveal-section" id="features" data-aos="fade-up">
+          <div className="finance-section-head" data-aos="fade-up" data-aos-delay="50">
             <p className="finance-tag">Core Features</p>
             <h2>Everything important in one finance workspace.</h2>
           </div>
           <div className="finance-feature-grid">
-            <article className="finance-feature-card finance-feature-card-accent"><div className="finance-feature-icon">AI</div><h3>AI Finance Predictor</h3><p>Ask the chatbot about next-month expenses, savings opportunities, and top-spending categories.</p></article>
-            <article className="finance-feature-card"><div className="finance-feature-icon">TR</div><h3>Expense & Transaction Tracking</h3><p>Save daily records, view recent activity, and monitor category-wise spending patterns easily.</p></article>
-            <article className="finance-feature-card"><div className="finance-feature-icon">RP</div><h3>Reports & Insights</h3><p>Generate downloadable reports and review budget-vs-spending with smarter summaries.</p></article>
-            <article className="finance-feature-card"><div className="finance-feature-icon">US</div><h3>User Profile & Settings</h3><p>Control account data, notifications, preferences, and security details from one place.</p></article>
+            <article className="finance-feature-card finance-feature-card-accent" data-aos="fade-up" data-aos-delay="40"><div className="finance-feature-icon">AI</div><h3>AI Finance Predictor</h3><p>Ask the chatbot about next-month expenses, savings opportunities, and top-spending categories.</p></article>
+            <article className="finance-feature-card" data-aos="fade-up" data-aos-delay="120"><div className="finance-feature-icon">TR</div><h3>Expense & Transaction Tracking</h3><p>Save daily records, view recent activity, and monitor category-wise spending patterns easily.</p></article>
+            <article className="finance-feature-card" data-aos="fade-up" data-aos-delay="200"><div className="finance-feature-icon">RP</div><h3>Reports & Insights</h3><p>Generate downloadable reports and review budget-vs-spending with smarter summaries.</p></article>
+            <article className="finance-feature-card" data-aos="fade-up" data-aos-delay="280"><div className="finance-feature-icon">US</div><h3>User Profile & Settings</h3><p>Control account data, notifications, preferences, and security details from one place.</p></article>
           </div>
         </section>
 
-        <section className="finance-section finance-story landing-reveal landing-reveal-section" id="about">
-          <div className="finance-story-copy">
+        <section className="finance-section finance-story landing-reveal landing-reveal-section" id="about" data-aos="fade-up">
+          <div className="finance-story-copy" data-aos="fade-right" data-aos-delay="60">
             <p className="finance-tag">Why This Project</p>
             <h2>Built for students and users who want finance clarity, not complexity.</h2>
             <p>AI Personal Finance turns scattered personal expense notes into a proper system with login, dashboard, analytics, secure card preview, reports, and a finance chatbot.</p>
@@ -561,13 +638,13 @@ function LandingPage() {
               <span>Chatbot with multilingual support</span>
             </div>
           </div>
-          <div className="finance-story-panel">
-            <div className="story-card story-card-dark">
+          <div className="finance-story-panel" data-aos="fade-left" data-aos-delay="140">
+            <div className="story-card story-card-dark" data-aos="zoom-in" data-aos-delay="180">
               <small>Monthly expense</small>
               <strong>PKR 32,000</strong>
               <p>Tracked through transactions and categories</p>
             </div>
-            <div className="story-card">
+            <div className="story-card" data-aos="zoom-in" data-aos-delay="260">
               <small>Suggested saving</small>
               <strong>PKR 6,400</strong>
               <p>AI recommendation based on current trends</p>
@@ -575,27 +652,27 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-section landing-reveal landing-reveal-section" id="team">
-          <div className="finance-section-head center">
+        <section className="finance-section landing-reveal landing-reveal-section" id="team" data-aos="fade-up">
+          <div className="finance-section-head center" data-aos="fade-up" data-aos-delay="50">
             <p className="finance-tag">Project Team</p>
             <h2>People behind the platform.</h2>
           </div>
           <div className="finance-team-grid">
-            {team.map((member) => <article className="finance-team-card" key={member.name}><div className="finance-team-avatar">{member.initials}</div><h3>{member.name}</h3><p>{member.role}</p></article>)}
+            {team.map((member, index) => <article className="finance-team-card" key={member.name} data-aos="fade-up" data-aos-delay={60 + index * 100}><div className="finance-team-avatar">{member.initials}</div><h3>{member.name}</h3><p>{member.role}</p></article>)}
           </div>
         </section>
 
-        <section className="finance-section finance-testimonial-panel landing-reveal landing-reveal-section">
+        <section className="finance-section finance-testimonial-panel landing-reveal landing-reveal-section" data-aos="fade-up">
           <div className="finance-section-head">
-            <div>
+            <div data-aos="fade-right" data-aos-delay="60">
               <p className="finance-tag">User Feedback</p>
               <h2>Animated testimonial showcase.</h2>
             </div>
-            <div className="testimonial-dots" aria-hidden="true">
+            <div className="testimonial-dots" aria-hidden="true" data-aos="fade-left" data-aos-delay="120">
               {testimonials.map((_, index) => <button key={index} type="button" className={activeTestimonial === index ? "active" : ""} onClick={() => setActiveTestimonial(index)}></button>)}
             </div>
           </div>
-          <div className="testimonial-carousel">
+          <div className="testimonial-carousel" data-aos="fade-up" data-aos-delay="160">
             <div className="testimonial-track" style={{ transform: `translateX(calc(-${activeTestimonial * 100}% - ${activeTestimonial * 24}px))` }}>
               {testimonials.map((item) => (
                 <article className="testimonial-card finance-testimonial-card" key={item.name}>
@@ -609,8 +686,8 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="finance-section finance-end-panel landing-reveal landing-reveal-section" id="contact">
-          <div className="finance-end-copy">
+        <section className="finance-section finance-end-panel landing-reveal landing-reveal-section" id="contact" data-aos="fade-up">
+          <div className="finance-end-copy" data-aos="fade-right" data-aos-delay="60">
             <p className="finance-tag">Ready To Start?</p>
             <h2>Turn your final year project into a finance product that actually feels live.</h2>
             <p>From signup and secure account flow to expense analytics, ATM card preview, report export, and AI guidance, this platform now brings the full journey together in one polished experience.</p>
@@ -619,13 +696,13 @@ function LandingPage() {
               <Link className="btn btn-finance-ghost" to="/login">Login Now</Link>
             </div>
           </div>
-          <div className="finance-end-grid">
-            <article className="finance-end-card finance-end-card-primary">
+          <div className="finance-end-grid" data-aos="fade-left" data-aos-delay="140">
+            <article className="finance-end-card finance-end-card-primary" data-aos="zoom-in" data-aos-delay="180">
               <small>Project Outcome</small>
               <strong>Smart Personal Finance Platform</strong>
               <p>Track expenses, manage profiles, secure cards, generate reports, and ask the AI predictor for planning help.</p>
             </article>
-            <article className="finance-end-card">
+            <article className="finance-end-card" data-aos="zoom-in" data-aos-delay="240">
               <small>What Users Get</small>
               <ul className="finance-end-list">
                 <li>Live dashboard with PKR analytics</li>
@@ -633,7 +710,7 @@ function LandingPage() {
                 <li>Chatbot-based future expense guidance</li>
               </ul>
             </article>
-            <article className="finance-end-card">
+            <article className="finance-end-card" data-aos="zoom-in" data-aos-delay="300">
               <small>Submission Ready</small>
               <div className="finance-end-metrics">
                 <div><strong>UI</strong><span>Landing to dashboard flow</span></div>
@@ -655,6 +732,17 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
   const currentMode = searchParams.get("mode") === "signup" ? "signup" : mode;
   const isLogin = currentMode === "login";
   usePageMeta(isLogin ? "Login | AI Personal Finance" : "Sign Up | AI Personal Finance", "auth-page");
+
+  useEffect(() => {
+    AOS.init({
+      duration: 820,
+      easing: "ease-out-cubic",
+      once: true,
+      offset: 40,
+      mirror: false,
+    });
+    AOS.refresh();
+  }, [isLogin]);
   const [form, setForm] = useState({ name: user.name, email: user.email, password: "", confirmPassword: "" });
   const [activeSlide, setActiveSlide] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
@@ -739,19 +827,19 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
 
   return (
     <div className={`auth-shell ${isLogin ? "auth-shell-login" : "auth-shell-signup"} auth-slide-${activeSlide}`}>
-      <section className="auth-panel auth-info auth-showcase auth-reveal auth-reveal-showcase">
-        <div className="auth-showcase-top">
-          <Link className="brand auth-brand-dark" to="/"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Secure finance workspace</small></span></Link>
+      <section className="auth-panel auth-info auth-showcase auth-reveal auth-reveal-showcase" data-aos="fade-right" data-aos-duration="900">
+        <div className="auth-showcase-top" data-aos="fade-down" data-aos-delay="40">
+          <Link className="brand auth-brand-dark" to="/"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span></Link>
           <span className="auth-showcase-chip">{isLogin ? "Secure Access" : "New Account"}</span>
         </div>
-        <div className="auth-showcase-copy">
+        <div className="auth-showcase-copy" data-aos="fade-up" data-aos-delay="90">
           <p className="auth-slider-tag">{currentSlide.eyebrow}</p>
           <h1>{isLogin ? "One place for your money, reports, and AI help." : "Create your finance space in seconds."}</h1>
           <h3 className="auth-slider-title">{currentSlide.title}</h3>
           <p className="auth-copy">{isLogin ? "Log in to review expenses, budgets, linked cards, settings, and AI predictions without jumping between screens." : "Register once and move directly into your personal finance dashboard with transactions, reports, and AI insights ready to use."}</p>
           <div className="auth-dots" aria-hidden="true">{authSlides.map((slide, index) => <button key={slide.theme} type="button" className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} aria-label={`Show slide ${index + 1}`}></button>)}</div>
         </div>
-        <div className={`auth-visual-stage auth-visual-stage-${currentSlide.theme}`} aria-hidden="true">
+        <div className={`auth-visual-stage auth-visual-stage-${currentSlide.theme}`} aria-hidden="true" data-aos="zoom-in" data-aos-delay="150">
           <div className="auth-stage-orb auth-stage-orb-a"></div>
           <div className="auth-stage-orb auth-stage-orb-b"></div>
           <div className="auth-media-shell">
@@ -783,17 +871,17 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
               </div>
             </div>
           </div>
-          <div className="auth-floating-card balance-card">
+          <div className="auth-floating-card balance-card" data-aos="fade-right" data-aos-delay="220">
             <span>{currentSlide.note}</span>
             <strong>{currentSlide.stat}</strong>
             <p>Live finance preview</p>
           </div>
-          <div className="auth-floating-card ring-card">
+          <div className="auth-floating-card ring-card" data-aos="fade-left" data-aos-delay="280">
             <div className="mini-donut">
               <div className="mini-donut-center"><strong>{activeSlide === 0 ? "34" : activeSlide === 1 ? "82" : "01"}</strong><span>{activeSlide === 0 ? "Food" : activeSlide === 1 ? "AI" : "Card"}</span></div>
             </div>
           </div>
-          <div className="auth-floating-card upload-card">
+          <div className="auth-floating-card upload-card" data-aos="fade-up" data-aos-delay="340">
             <div className="upload-icon">{activeSlide === 2 ? "SC" : activeSlide === 1 ? "AI" : "CD"}</div>
             <div>
               <strong>{activeSlide === 0 ? "Expense overview" : activeSlide === 1 ? "Prediction ready" : "Secure access"}</strong>
@@ -803,23 +891,28 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
           <div className="auth-glow auth-glow-a"></div>
           <div className="auth-glow auth-glow-b"></div>
         </div>
-        <div className="auth-copy-wrap">
+        <div className="auth-copy-wrap" data-aos="fade-up" data-aos-delay="180">
           <div className="auth-info-pills">
             <span>Expense tracking</span>
             <span>AI predictor</span>
             <span>Secure card vault</span>
           </div>
+          <div className="auth-photo-row" aria-hidden="true">
+            <div className="auth-photo-card auth-photo-card-one" data-aos="fade-up" data-aos-delay="220"></div>
+            <div className="auth-photo-card auth-photo-card-two" data-aos="fade-up" data-aos-delay="280"></div>
+            <div className="auth-photo-card auth-photo-card-three" data-aos="fade-up" data-aos-delay="340"></div>
+          </div>
         </div>
       </section>
-      <section className="auth-panel auth-form-panel auth-reveal auth-reveal-form">
-        <div className="auth-card">
-          <div className="auth-card-head">
+      <section className="auth-panel auth-form-panel auth-reveal auth-reveal-form" data-aos="fade-left" data-aos-duration="900">
+        <div className="auth-card" data-aos="zoom-in" data-aos-delay="100">
+          <div className="auth-card-head" data-aos="fade-down" data-aos-delay="140">
             <p className="form-tag">{isLogin ? "Login" : "Create Account"}</p>
             <span className="auth-head-badge">{isLogin ? "Protected Access" : "Secure Setup"}</span>
           </div>
-          <h2>{isLogin ? "Welcome back to your finance dashboard" : "Set up your account and continue"}</h2>
-          <p className="auth-form-copy">{isLogin ? "Use your email and password to access dashboard insights, saved cards, reports, and the AI predictor." : "Register with your details and continue into the dashboard with your own finance profile."}</p>
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <h2 data-aos="fade-up" data-aos-delay="180">{isLogin ? "Welcome back to your finance dashboard" : "Set up your account and continue"}</h2>
+          <p className="auth-form-copy" data-aos="fade-up" data-aos-delay="220">{isLogin ? "Use your email and password to access dashboard insights, saved cards, reports, and the AI predictor." : "Register with your details and continue into the dashboard with your own finance profile."}</p>
+          <form className="auth-form" onSubmit={handleSubmit} data-aos="fade-up" data-aos-delay="260">
             {!isLogin ? <label>Full Name<input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} type="text" placeholder="Enter your full name" required /></label> : null}
             <label>Email Address<input value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} type="email" placeholder="you@example.com" required /></label>
             <label>Password<div className="password-field"><input value={form.password} onChange={(e) => setForm((s) => ({ ...s, password: e.target.value }))} type={showPassword ? "text" : "password"} placeholder="Enter password" required /><button className="password-toggle" type="button" onClick={() => setShowPassword((value) => !value)}>{showPassword ? "Hide" : "Show"}</button></div></label>
@@ -828,12 +921,12 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             {errorText ? <small className="field-helper error">{errorText}</small> : null}
             <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>{submitting ? "Please wait..." : isLogin ? "Sign In" : "Register Now"}</button>
           </form>
-          <div className="auth-divider"><span>or continue with</span></div>
-          <div className="auth-socials">
+          <div className="auth-divider" data-aos="fade-up" data-aos-delay="300"><span>or continue with</span></div>
+          <div className="auth-socials" data-aos="fade-up" data-aos-delay="340">
             <button className="auth-social-btn auth-social-btn-google" type="button" onClick={handleGoogleAuth} disabled={submitting}><span className="social-logo social-logo-google">G</span> Continue with Google</button>
             <button className="auth-social-btn auth-social-btn-facebook" type="button" onClick={handleFacebookAuth} disabled={submitting}><span className="social-logo social-logo-facebook">f</span> Continue with Facebook</button>
           </div>
-          <div className="auth-trust-row">
+          <div className="auth-trust-row" data-aos="fade-up" data-aos-delay="380">
             <span>Encrypted login</span>
             <span>Fast access</span>
             <span>AI-ready dashboard</span>
@@ -869,6 +962,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const [profileForm, setProfileForm] = useState({
     name: user.name,
     email: user.email,
+    avatar: user.avatar || "",
     phone: user.phone,
     cnic: user.cnic,
     address: user.address,
@@ -1000,6 +1094,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     setProfileForm({
       name: user.name,
       email: user.email,
+      avatar: user.avatar || "",
       phone: user.phone,
       cnic: user.cnic,
       address: user.address,
@@ -1046,7 +1141,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = chatbotLanguage === "roman-ur" ? "ur-PK" : chatbotLanguage;
+    recognition.lang = resolveSpeechLang(chatbotLanguage);
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
     recognition.onresult = (event) => {
@@ -1076,7 +1171,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const speakReply = (text) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = chatbotLanguage === "roman-ur" ? "ur-PK" : chatbotLanguage;
+    utterance.lang = resolveSpeechLang(chatbotLanguage);
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
@@ -1152,6 +1247,34 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     event.preventDefault();
     setUser((current) => ({ ...current, ...profileForm }));
     showToast("success", "Profile updated successfully.");
+  };
+
+  const handleProfileImage = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast("info", "Please select a valid image file.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setProfileForm((current) => ({ ...current, avatar: result }));
+      showToast("success", "Profile picture updated.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const resetDashboard = () => {
+    setExpenses([]);
+    setCard(emptyCard);
+    setSettings(defaultSettings);
+    setChatHistory(getWelcomeChat(user, []));
+    setCardMessage("");
+    setCardMessageType("info");
+    setEditingTransaction(null);
+    setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
+    showToast("success", "Dashboard reset. All finance values are now empty and ready for fresh entries.");
   };
 
   const editTransaction = (index) => {
@@ -1251,7 +1374,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   return (
     <div className="dashboard-layout">
       <aside className="sidebar">
-        <div className="sidebar-brand"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Finance command center</small></span></div>
+        <div className="sidebar-brand"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span></div>
         <nav className="sidebar-nav dashboard-nav">
           <a className={activeSection === "dashboard" ? "active" : ""} href="#dashboard">Dashboard</a>
           <a className={activeSection === "wallet" ? "active" : ""} href="#wallet">Wallet</a>
@@ -1273,8 +1396,8 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
             <div className="topbar-status-card"><span>Live Status</span><strong>All systems active</strong></div>
           </div>
           <div className="profile-menu" onClick={(e) => e.stopPropagation()}>
-            <button className="profile-pill profile-trigger" type="button" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><div className="profile-avatar"></div><span>{user.name.split(" ")[0]}</span></button>
-            {!profileOpen ? null : <div className="profile-dropdown"><div className="profile-dropdown-head"><div className="profile-avatar small">{initial}</div><div><strong>{user.name}</strong><p>{user.email}</p></div></div><div className="profile-dropdown-links"><a href="#user-account">My Profile</a><a href="#settings">Security & Settings</a><a href="#card-form">Linked Cards</a><a href="#analytical">Insights</a><button type="button" onClick={handleLogout}>{loggingOut ? "Logging out..." : "Logout"}</button></div></div>}
+            <button className="profile-pill profile-trigger" type="button" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><div className={`profile-avatar ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : null}</div><span>{user.name.split(" ")[0]}</span></button>
+            {!profileOpen ? null : <div className="profile-dropdown"><div className="profile-dropdown-head"><div className={`profile-avatar small ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : initial}</div><div><strong>{user.name}</strong><p>{user.email}</p></div></div><div className="profile-dropdown-links"><a href="#user-account">My Profile</a><a href="#settings">Security & Settings</a><a href="#card-form">Linked Cards</a><a href="#analytical">Insights</a><button type="button" onClick={handleLogout}>{loggingOut ? "Logging out..." : "Logout"}</button></div></div>}
           </div>
         </header>
 
@@ -1314,8 +1437,8 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
             </div>
           </section>
         </section>
-        <section className="dashboard-split account-section-wrap"><section className="dashboard-card account-panel" id="user-account"><div className="card-header section-inline"><h2>User Account</h2><span className="status-badge">Verified</span></div><div className="profile-banner"><div className="profile-summary"><div className="profile-avatar large">{initial}</div><div><h3>{user.name}</h3><p>{user.email}</p><span className="mini-status">Premium Member since {user.memberSince}</span></div></div><div className="security-chip">2-Step Verification Active</div></div><div className="account-grid"><div className="account-box"><p>Phone Number</p><strong>{user.phone}</strong></div><div className="account-box"><p>CNIC / ID</p><strong>{user.cnic}</strong></div><div className="account-box"><p>Address</p><strong>{user.address}</strong></div><div className="account-box"><p>Last Login</p><strong>{user.lastLogin}</strong></div></div><div className="detail-grid"><div className="detail-card"><h3>Profile Details</h3><div className="detail-line"><span>Full Name</span><strong>{user.name}</strong></div><div className="detail-line"><span>Date of Birth</span><strong>{user.dob}</strong></div><div className="detail-line"><span>Occupation</span><strong>{user.occupation}</strong></div><div className="detail-line"><span>Preferred Currency</span><strong>{user.currency}</strong></div></div><div className="detail-card"><h3>Account Security</h3><div className="detail-line"><span>Password Status</span><strong>Updated 10 days ago</strong></div><div className="detail-line"><span>Recovery Email</span><strong>backup@aifinance.com</strong></div><div className="detail-line"><span>Device Trust</span><strong>3 trusted devices</strong></div><div className="detail-line"><span>Security Score</span><strong>92 / 100</strong></div></div><div className="detail-card"><h3>Preferences</h3><div className="detail-line"><span>Language</span><strong>{user.language}</strong></div><div className="detail-line"><span>Alerts</span><strong>Enabled</strong></div><div className="detail-line"><span>Weekly Reports</span><strong>Every Sunday</strong></div><div className="detail-line"><span>Theme</span><strong>Light Dashboard</strong></div></div></div><div className="account-edit-panel"><div className="card-header section-inline"><h3>Edit Profile</h3><span className="status-badge light">Saved Locally</span></div><form className="expense-form profile-form" onSubmit={saveProfile}><label>Full Name<input value={profileForm.name} onChange={(e) => setProfileForm((s) => ({ ...s, name: e.target.value }))} type="text" /></label><label>Email<input value={profileForm.email} onChange={(e) => setProfileForm((s) => ({ ...s, email: e.target.value }))} type="email" /></label><label>Phone Number<input value={profileForm.phone} onChange={(e) => setProfileForm((s) => ({ ...s, phone: e.target.value }))} type="text" /></label><label>CNIC / ID<input value={profileForm.cnic} onChange={(e) => setProfileForm((s) => ({ ...s, cnic: e.target.value }))} type="text" /></label><label>Address<input value={profileForm.address} onChange={(e) => setProfileForm((s) => ({ ...s, address: e.target.value }))} type="text" /></label><label>Occupation<input value={profileForm.occupation} onChange={(e) => setProfileForm((s) => ({ ...s, occupation: e.target.value }))} type="text" /></label><label>Date of Birth<input value={profileForm.dob} onChange={(e) => setProfileForm((s) => ({ ...s, dob: e.target.value }))} type="text" /></label><label>Language<input value={profileForm.language} onChange={(e) => setProfileForm((s) => ({ ...s, language: e.target.value }))} type="text" /></label><button className="btn btn-primary auth-submit" type="submit">Save Profile</button></form></div></section><div className="settings-stack"><section className="dashboard-card settings-panel" id="settings"><div className="card-header section-inline"><h2>Settings</h2><span className="status-badge light">Updated</span></div><div className="settings-list"><div className="setting-row"><span>Email Notifications</span><button className={`toggle-btn ${settings.emailNotifications ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, emailNotifications: !current.emailNotifications }))}>{settings.emailNotifications ? "On" : "Off"}</button></div><div className="setting-row"><span>Monthly Budget Alerts</span><button className={`toggle-btn ${settings.budgetAlerts ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, budgetAlerts: !current.budgetAlerts }))}>{settings.budgetAlerts ? "On" : "Off"}</button></div><div className="setting-row"><span>Dark Summary Reports</span><button className={`toggle-btn ${settings.darkReports ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, darkReports: !current.darkReports }))}>{settings.darkReports ? "On" : "Off"}</button></div></div><div className="settings-security"><div className="security-item"><span>Login Alerts</span><strong>Enabled for every new device</strong></div><div className="security-item"><span>Data Privacy</span><strong>Account info stays masked in card preview</strong></div></div></section><section className="dashboard-card settings-panel settings-support-card"><div className="card-header section-inline"><h2>Security Status</h2><span className="status-badge">Protected</span></div><div className="account-grid single-column"><div className="account-box"><p>Trusted Device</p><strong>This browser session is marked as secure.</strong></div><div className="account-box"><p>Backup Reminder</p><strong>Review profile, card details, and downloaded reports weekly.</strong></div><div className="account-box"><p>Quick Help</p><strong>Keep budget alerts on and update your password regularly for safer usage.</strong></div></div></section></div></section>
-        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><div><h2>Add ATM / Debit Card</h2><p className="section-copy">Type card details below and watch the secure preview, brand type, and security checks update in real time.</p></div><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><div className="card-live-preview"><div className="card-live-head"><strong>Live card readiness</strong><span>{cardCompletion}% complete</span></div><div className="card-progress-track"><div className="card-progress-fill" style={{ width: `${cardCompletion}%` }}></div></div><div className="card-checklist">{cardChecks.map((item) => <div className={`card-check-item ${item.passed ? "passed" : ""}`} key={item.label}><span>{item.passed ? "OK" : ".."}</span><strong>{item.label}</strong></div>)}</div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<select value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} required><option value="">Select bank</option>{bankOptions.map((bank) => <option key={bank} value={bank}>{bank}</option>)}</select></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: onlyDigits(e.target.value).slice(0, 6) }))} type="text" inputMode="numeric" placeholder="54000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, valid MM/YY expiry, secure CVV, and billing ZIP complete rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card atm-card-preview"><div className="atm-card-top"><div><span>{liveCardBank}</span><strong>Debit Card</strong></div><span className="atm-network">{liveCardBrand}</span></div><div className="atm-chip"></div><strong>{liveCardNumber}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{liveCardHolder}</strong></div><div><span>Expiry</span><strong>{liveCardExpiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank}</strong></div><div className="account-box"><p>Security</p><strong>Masked and encrypted preview</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.bank} card added with masked number and profile binding</strong></div><div className="security-item"><span>CVV Storage</span><strong>CVV hidden ({card.cvvMasked}) and protected for secure preview only</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div><div className="security-item"><span>Brand Detection</span><strong>{card.brand || "Secure"} network identified with live number pattern check</strong></div></div></section></section>
+        <section className="dashboard-split account-section-wrap"><section className="dashboard-card account-panel" id="user-account"><div className="card-header section-inline"><h2>User Account</h2><span className="status-badge">Verified</span></div><div className="profile-banner"><div className="profile-summary"><div className={`profile-avatar large ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : initial}</div><div><h3>{user.name}</h3><p>{user.email}</p><span className="mini-status">Premium Member since {user.memberSince}</span></div></div><div className="security-chip">2-Step Verification Active</div></div><div className="account-grid"><div className="account-box"><p>Phone Number</p><strong>{user.phone}</strong></div><div className="account-box"><p>CNIC / ID</p><strong>{user.cnic}</strong></div><div className="account-box"><p>Address</p><strong>{user.address}</strong></div><div className="account-box"><p>Last Login</p><strong>{user.lastLogin}</strong></div></div><div className="detail-grid"><div className="detail-card"><h3>Profile Details</h3><div className="detail-line"><span>Full Name</span><strong>{user.name}</strong></div><div className="detail-line"><span>Date of Birth</span><strong>{user.dob}</strong></div><div className="detail-line"><span>Occupation</span><strong>{user.occupation}</strong></div><div className="detail-line"><span>Preferred Currency</span><strong>{user.currency}</strong></div></div><div className="detail-card"><h3>Account Security</h3><div className="detail-line"><span>Password Status</span><strong>Updated 10 days ago</strong></div><div className="detail-line"><span>Recovery Email</span><strong>backup@aifinance.com</strong></div><div className="detail-line"><span>Device Trust</span><strong>3 trusted devices</strong></div><div className="detail-line"><span>Security Score</span><strong>92 / 100</strong></div></div><div className="detail-card"><h3>Preferences</h3><div className="detail-line"><span>Language</span><strong>{user.language}</strong></div><div className="detail-line"><span>Alerts</span><strong>Enabled</strong></div><div className="detail-line"><span>Weekly Reports</span><strong>Every Sunday</strong></div><div className="detail-line"><span>Theme</span><strong>Light Dashboard</strong></div></div></div><div className="account-edit-panel"><div className="card-header section-inline"><h3>Edit Profile</h3><span className="status-badge light">Saved Locally</span></div><form className="expense-form profile-form" onSubmit={saveProfile}><label>Profile Picture<input type="file" accept="image/*" onChange={handleProfileImage} /><small className="field-helper">Upload a clear image for top-right profile and account preview.</small></label><label>Full Name<input value={profileForm.name} onChange={(e) => setProfileForm((s) => ({ ...s, name: e.target.value }))} type="text" /></label><label>Email<input value={profileForm.email} onChange={(e) => setProfileForm((s) => ({ ...s, email: e.target.value }))} type="email" /></label><label>Phone Number<input value={profileForm.phone} onChange={(e) => setProfileForm((s) => ({ ...s, phone: e.target.value }))} type="text" /></label><label>CNIC / ID<input value={profileForm.cnic} onChange={(e) => setProfileForm((s) => ({ ...s, cnic: e.target.value }))} type="text" /></label><label>Address<input value={profileForm.address} onChange={(e) => setProfileForm((s) => ({ ...s, address: e.target.value }))} type="text" /></label><label>Occupation<input value={profileForm.occupation} onChange={(e) => setProfileForm((s) => ({ ...s, occupation: e.target.value }))} type="text" /></label><label>Date of Birth<input value={profileForm.dob} onChange={(e) => setProfileForm((s) => ({ ...s, dob: e.target.value }))} type="text" /></label><label>Language<input value={profileForm.language} onChange={(e) => setProfileForm((s) => ({ ...s, language: e.target.value }))} type="text" /></label><button className="btn btn-primary auth-submit" type="submit">Save Profile</button></form></div></section><div className="settings-stack"><section className="dashboard-card settings-panel" id="settings"><div className="card-header section-inline"><h2>Settings</h2><span className="status-badge light">Updated</span></div><div className="settings-list"><div className="setting-row"><span>Email Notifications</span><button className={`toggle-btn ${settings.emailNotifications ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, emailNotifications: !current.emailNotifications }))}>{settings.emailNotifications ? "On" : "Off"}</button></div><div className="setting-row"><span>Monthly Budget Alerts</span><button className={`toggle-btn ${settings.budgetAlerts ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, budgetAlerts: !current.budgetAlerts }))}>{settings.budgetAlerts ? "On" : "Off"}</button></div><div className="setting-row"><span>Dark Summary Reports</span><button className={`toggle-btn ${settings.darkReports ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, darkReports: !current.darkReports }))}>{settings.darkReports ? "On" : "Off"}</button></div></div><div className="settings-security"><div className="security-item"><span>Login Alerts</span><strong>Enabled for every new device</strong></div><div className="security-item"><span>Data Privacy</span><strong>Account info stays masked in card preview</strong></div></div><div className="settings-actions"><button className="btn btn-finance-ghost" type="button" onClick={resetDashboard}>Reset Dashboard</button></div></section><section className="dashboard-card settings-panel settings-support-card"><div className="card-header section-inline"><h2>Security Status</h2><span className="status-badge">Protected</span></div><div className="account-grid single-column"><div className="account-box"><p>Trusted Device</p><strong>This browser session is marked as secure.</strong></div><div className="account-box"><p>Backup Reminder</p><strong>Review profile, card details, and downloaded reports weekly.</strong></div><div className="account-box"><p>Quick Help</p><strong>Keep budget alerts on and update your password regularly for safer usage.</strong></div></div></section></div></section>
+        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><div><h2>Add ATM / Debit Card</h2><p className="section-copy">Type card details below and watch the secure preview, brand type, and security checks update in real time.</p></div><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><div className="card-live-preview"><div className="card-live-head"><strong>Live card readiness</strong><span>{cardCompletion}% complete</span></div><div className="card-progress-track"><div className="card-progress-fill" style={{ width: `${cardCompletion}%` }}></div></div><div className="card-checklist">{cardChecks.map((item) => <div className={`card-check-item ${item.passed ? "passed" : ""}`} key={item.label}><span>{item.passed ? "OK" : ".."}</span><strong>{item.label}</strong></div>)}</div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<select value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} required><option value="">Select bank</option>{bankOptions.map((bank) => <option key={bank} value={bank}>{bank}</option>)}</select></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: onlyDigits(e.target.value).slice(0, 6) }))} type="text" inputMode="numeric" placeholder="54000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, valid MM/YY expiry, secure CVV, and billing ZIP complete rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card atm-card-preview"><div className="atm-card-top"><div><span>{liveCardBank}</span><strong>Debit Card</strong></div><span className="atm-network">{liveCardBrand}</span></div><div className="atm-chip"></div><strong>{liveCardNumber}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{liveCardHolder}</strong></div><div><span>Expiry</span><strong>{liveCardExpiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank || "No bank linked yet"}</strong></div><div className="account-box"><p>Security</p><strong>{card.number ? "Masked and encrypted preview" : "Secure preview ready for new card"}</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.number ? `${card.bank} card added with masked number and profile binding` : "No card linked right now. Add a new ATM/debit card anytime."}</strong></div><div className="security-item"><span>CVV Storage</span><strong>{card.number ? `CVV hidden (${card.cvvMasked}) and protected for secure preview only` : "CVV will stay hidden once a card is added."}</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div><div className="security-item"><span>Brand Detection</span><strong>{card.brand || "Secure"} network identified with live number pattern check</strong></div></div></section></section>
         <div className="floating-chatbot">
           {chatbotOpen ? (
             <div className="chatbot-widget">
@@ -1347,6 +1470,8 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
                   <button className="chatbot-chip" type="button" onClick={() => answerChat("Predict my next month expense")}>Predict</button>
                   <button className="chatbot-chip" type="button" onClick={() => answerChat("How much can I save next month?")}>Save</button>
                   <button className="chatbot-chip" type="button" onClick={() => answerChat("Which category is spending the most?")}>Category</button>
+                  <button className="chatbot-chip" type="button" onClick={() => answerChat("Give me a full finance summary")}>Summary</button>
+                  <button className="chatbot-chip" type="button" onClick={() => answerChat("What is my latest expense?")}>Latest</button>
                 </div>
                 <form className="chatbot-form" onSubmit={(e) => { e.preventDefault(); if (!chatInput.trim()) return; answerChat(chatInput.trim()); setChatInput(""); }}>
                   <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask anything about expenses..." required />

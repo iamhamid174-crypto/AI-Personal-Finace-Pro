@@ -74,27 +74,29 @@ body {
 }
 
 .brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
   position: relative;
   display: inline-grid;
   place-items: center;
-  background:
-    radial-gradient(circle at 24% 22%, rgba(255, 255, 255, 0.92), transparent 18%),
-    linear-gradient(145deg, #0f2f7a, #2157cc 52%, #67b4ff);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 255, 0.94));
+  border: 1px solid rgba(203, 219, 241, 0.9);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    0 16px 30px rgba(23, 66, 170, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 16px 30px rgba(23, 66, 170, 0.12);
   overflow: hidden;
 }
 
 .brand-mark-ring {
   position: absolute;
-  inset: 6px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+  inset: 8px 8px 10px 8px;
+  border-radius: 14px;
+  border-left: 4px solid #169ddd;
+  border-bottom: 4px solid #169ddd;
+  border-top: 0;
+  border-right: 0;
+  background: transparent;
 }
 
 .brand-mark-bars {
@@ -102,62 +104,64 @@ body {
   z-index: 1;
   display: flex;
   align-items: end;
-  gap: 4px;
-  margin-top: -2px;
+  gap: 7px;
+  margin: 10px 0 2px 6px;
 }
 
 .brand-mark-bars span {
-  width: 7px;
-  border-radius: 2px 2px 0 0;
-  background: linear-gradient(180deg, #4dd8ff, #9be7ff);
-  box-shadow: 0 4px 12px rgba(6, 19, 55, 0.16);
+  width: 8px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, #21b4ea, #1097d1);
+  box-shadow: 0 4px 10px rgba(16, 151, 209, 0.18);
 }
 
 .brand-mark-bars span:nth-child(1) {
-  height: 16px;
+  height: 18px;
 }
 
 .brand-mark-bars span:nth-child(2) {
-  height: 23px;
+  height: 28px;
 }
 
 .brand-mark-bars span:nth-child(3) {
-  height: 30px;
+  height: 37px;
 }
 
 .brand-mark-arrow {
   position: absolute;
-  left: 6px;
-  right: 4px;
-  bottom: 11px;
-  height: 16px;
-  border-bottom: 3px solid #133b9a;
-  border-radius: 0 0 24px 24px;
-  transform: rotate(-10deg);
+  left: 12px;
+  width: 34px;
+  top: 19px;
+  height: 4px;
+  background: #c3c7ce;
+  border-radius: 999px;
+  transform-origin: left center;
+  transform: rotate(-34deg);
   z-index: 2;
 }
 
 .brand-mark-arrow::after {
   content: "";
   position: absolute;
-  right: -1px;
+  right: -5px;
   top: -4px;
   width: 0;
   height: 0;
-  border-left: 8px solid #133b9a;
-  border-top: 6px solid transparent;
-  border-bottom: 6px solid transparent;
+  border-left: 11px solid #c3c7ce;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
 }
 
 .brand-mark-core {
   position: absolute;
-  inset: auto auto 10px 5px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  left: 9px;
+  bottom: 10px;
+  width: 4px;
+  height: 40px;
+  border-radius: 999px;
   z-index: 1;
-  background: #133b9a;
-  box-shadow: 0 0 0 3px rgba(19, 59, 154, 0.08);
+  background: linear-gradient(180deg, rgba(22, 157, 221, 0), #169ddd 28%);
+  box-shadow: 18px 9px 0 -1px rgba(22, 157, 221, 0.9);
 }
 
 .brand-lockup {
@@ -1088,6 +1092,13 @@ tbody tr + tr td {
   border-radius: 34px;
   border: 1px solid #e4ebf5;
   box-shadow: 0 24px 48px rgba(18, 34, 64, 0.06);
+  transition: transform 320ms ease, box-shadow 320ms ease, border-color 320ms ease;
+}
+
+.finance-section:hover,
+.finance-strip:hover {
+  border-color: #d8e5f7;
+  box-shadow: 0 28px 56px rgba(18, 34, 64, 0.08);
 }
 
 .finance-hero {
@@ -1280,6 +1291,7 @@ tbody tr + tr td {
   border: 1px solid #e3ebf6;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 16px 28px rgba(18, 34, 64, 0.05);
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
 }
 
 .finance-balance-card,
@@ -1478,6 +1490,16 @@ tbody tr + tr td {
   animation-fill-mode: both, none;
 }
 
+.finance-feature-card:hover,
+.finance-team-card:hover,
+.story-card:hover,
+.finance-end-card:hover,
+.finance-float:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 38px rgba(18, 34, 64, 0.1);
+  border-color: #d5e4fb;
+}
+
 .finance-feature-card:nth-child(2) { animation-delay: 0.08s; }
 .finance-feature-card:nth-child(3) { animation-delay: 0.16s; }
 .finance-feature-card:nth-child(4) { animation-delay: 0.24s; }
@@ -1601,6 +1623,7 @@ tbody tr + tr td {
   grid-auto-columns: calc(100% - 48px);
   gap: 24px;
   transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
 }
 
 .finance-testimonial-card {
@@ -1660,6 +1683,15 @@ tbody tr + tr td {
   border: 1px solid #e4ebf6;
   box-shadow: 0 14px 28px rgba(18, 34, 64, 0.05);
   animation: cardSoftPop 0.85s ease both;
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+}
+
+[data-aos="fade-up"],
+[data-aos="fade-right"],
+[data-aos="fade-left"],
+[data-aos="zoom-in"],
+[data-aos="fade-down"] {
+  will-change: transform, opacity;
 }
 
 .finance-end-card small {
@@ -2235,6 +2267,10 @@ tbody tr + tr td {
   animation: fadeSlideUp 0.7s ease both;
 }
 
+.auth-shell-login {
+  grid-template-columns: 1.02fr 0.98fr;
+}
+
 .auth-reveal {
   opacity: 0;
   transform: translateY(26px);
@@ -2260,7 +2296,7 @@ tbody tr + tr td {
   padding: 38px 40px 34px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 22px;
 }
 
@@ -2286,6 +2322,12 @@ tbody tr + tr td {
     radial-gradient(circle at bottom right, rgba(93, 164, 255, 0.14), transparent 28%),
     linear-gradient(180deg, #f8fbff 0%, #eef4fd 100%);
   overflow: hidden;
+  transition: box-shadow 320ms ease, transform 320ms ease;
+}
+
+.auth-showcase:hover,
+.auth-form-panel:hover {
+  box-shadow: 0 28px 54px rgba(18, 34, 64, 0.09);
 }
 
 .auth-showcase-top {
@@ -2325,6 +2367,7 @@ tbody tr + tr td {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-width: 590px;
 }
 
 .auth-visual-stage {
@@ -2337,6 +2380,46 @@ tbody tr + tr td {
   border: 1px solid rgba(220, 229, 242, 0.9);
   overflow: hidden;
   box-shadow: 0 24px 42px rgba(18, 34, 64, 0.07);
+}
+
+.auth-shell-login .auth-visual-stage {
+  min-height: 470px;
+}
+
+.auth-shell-login .auth-visual-stage::before {
+  content: "";
+  position: absolute;
+  inset: 18px 18px auto auto;
+  width: 168px;
+  height: 110px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.55), transparent 18%),
+    linear-gradient(135deg, rgba(96, 165, 250, 0.12), rgba(37, 99, 235, 0.22)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(239, 246, 255, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  box-shadow: 0 18px 32px rgba(24, 40, 72, 0.12);
+  opacity: 0.95;
+  z-index: 0;
+}
+
+.auth-shell-login .auth-visual-stage::after {
+  content: "";
+  position: absolute;
+  left: 26px;
+  bottom: 18px;
+  width: 228px;
+  height: 142px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.45), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0)),
+    linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(14, 116, 144, 0.18)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 32px rgba(24, 40, 72, 0.12);
+  opacity: 0.96;
+  z-index: 0;
 }
 
 .auth-stage-orb {
@@ -2389,6 +2472,7 @@ tbody tr + tr td {
   box-shadow: 0 24px 42px rgba(24, 40, 72, 0.08);
   animation: authMediaIn 1s cubic-bezier(0.2, 0.8, 0.2, 1) 0.22s both;
   transition: transform 500ms ease, box-shadow 300ms ease;
+  z-index: 1;
 }
 
 .auth-slide-1 .auth-media-shell {
@@ -2572,6 +2656,7 @@ tbody tr + tr td {
   border: 1px solid #e5ecf8;
   box-shadow: 0 20px 38px rgba(31, 53, 95, 0.08);
   animation: floatCard 5.8s ease-in-out infinite;
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
 }
 
 .balance-card {
@@ -2701,6 +2786,62 @@ tbody tr + tr td {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  max-width: 590px;
+}
+
+.auth-photo-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.auth-photo-card {
+  min-height: 112px;
+  border-radius: 22px;
+  border: 1px solid rgba(224, 233, 245, 0.92);
+  box-shadow:
+    0 18px 32px rgba(18, 34, 64, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  background-color: #ffffff;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+  animation: cardSoftPop 0.9s ease both;
+  transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
+}
+
+.auth-photo-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(17, 24, 39, 0.18)),
+    linear-gradient(135deg, rgba(47, 121, 255, 0.06), transparent 50%);
+}
+
+.auth-photo-card-one {
+  background-image:
+    radial-gradient(circle at 76% 24%, rgba(255, 255, 255, 0.46), transparent 18%),
+    linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(14, 116, 144, 0.18)),
+    linear-gradient(180deg, #f8fbff 0%, #eaf3ff 100%);
+}
+
+.auth-photo-card-two {
+  background-image:
+    radial-gradient(circle at 22% 20%, rgba(255, 255, 255, 0.4), transparent 16%),
+    linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(37, 99, 235, 0.2)),
+    linear-gradient(180deg, #fafdff 0%, #eef6ff 100%);
+  animation-delay: 0.08s;
+}
+
+.auth-photo-card-three {
+  background-image:
+    radial-gradient(circle at 78% 22%, rgba(255, 255, 255, 0.45), transparent 18%),
+    linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(99, 102, 241, 0.2)),
+    linear-gradient(180deg, #fbfdff 0%, #edf4ff 100%);
+  animation-delay: 0.16s;
 }
 
 .auth-slider-tag {
@@ -2768,6 +2909,8 @@ tbody tr + tr td {
     radial-gradient(circle at top right, rgba(96, 165, 250, 0.1), transparent 26%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 251, 255, 0.98));
   border-left: 1px solid rgba(220, 229, 242, 0.92);
+  align-content: center;
+  transition: box-shadow 320ms ease;
 }
 
 .auth-card {
@@ -2781,6 +2924,16 @@ tbody tr + tr td {
     0 24px 44px rgba(18, 34, 64, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
   animation: authCardIn 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.25s both;
+  margin-block: auto;
+  transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
+}
+
+.auth-card:hover {
+  transform: translateY(-6px);
+  box-shadow:
+    0 30px 56px rgba(18, 34, 64, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+  border-color: #d7e6fb;
 }
 
 .form-tag {
@@ -3012,6 +3165,23 @@ tbody tr + tr td {
   margin-top: 6px;
   border-radius: 16px;
   box-shadow: 0 16px 30px rgba(47, 121, 255, 0.22);
+}
+
+.auth-submit,
+.auth-social-btn,
+.auth-dots button,
+.auth-info-pills span,
+.auth-trust-row span {
+  transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease, border-color 220ms ease;
+}
+
+.auth-social-btn:hover,
+.auth-submit:hover,
+.auth-info-pills span:hover,
+.auth-trust-row span:hover,
+.auth-floating-card:hover,
+.auth-photo-card:hover {
+  transform: translateY(-4px);
 }
 
 .auth-switch {
@@ -3356,6 +3526,18 @@ tbody tr + tr td {
     radial-gradient(circle at 50% 35%, #ffffff 0 12px, transparent 13px),
     radial-gradient(circle at 50% 86%, #ffffff 0 12px, transparent 13px),
     linear-gradient(180deg, #737d8c, #4a5566);
+}
+
+.profile-avatar.has-image {
+  background: #eaf1ff;
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .profile-avatar.small {
@@ -4755,6 +4937,12 @@ tbody tr + tr td {
   font-size: 1.05rem;
 }
 
+.settings-actions {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e5edf8;
+}
+
 .profile-form {
   margin-top: 16px;
 }
@@ -5433,8 +5621,21 @@ tbody tr + tr td {
     padding-inline: 4px;
   }
 
+  .auth-photo-row {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-photo-card {
+    min-height: 140px;
+  }
+
   .auth-visual-stage {
     min-height: 320px;
+  }
+
+  .auth-shell-login .auth-visual-stage::before,
+  .auth-shell-login .auth-visual-stage::after {
+    display: none;
   }
 
   .balance-card {

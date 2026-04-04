@@ -1,7 +1,0 @@
-opened=True
-frames=1037
-fps=60.0
-duration=17.283333333333335
-frame_1_ok=True
-frame_2_ok=True
-frame_3_ok=True
