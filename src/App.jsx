@@ -12,35 +12,41 @@ const STORAGE_KEYS = {
 };
 
 const defaultUser = {
-  name: "User Name",
-  email: "user@aifinance.com",
+  name: "Muhammad  Hamid ",
+  email: "HamidSidhu@email.com",
   avatar: "",
-  phone: "+92 300 1234567",
+  phone: "+92 301 2345678",
   cnic: "35202-1234567-1",
-  address: "Lahore, Pakistan",
-  occupation: "Software Engineering Student",
-  dob: "12 Aug 2001",
+  address: "Gulberg, Faisalabad, Pakistan",
+  occupation: "Software Engineer",
+  dob: "15 Mar 1998",
   language: "English",
-  memberSince: "January 2024",
+  memberSince: "March 2024",
   currency: "PKR",
-  lastLogin: "2026-03-25 03:35 PM",
+  lastLogin: "2026-04-28 10:30 AM",
 };
 
 const defaultExpenses = [
-  { icon: "FD", title: "Grocery Shopping", category: "Food", date: "2024-02-22", amount: 125.5, type: "expense" },
-  { icon: "IN", title: "Salary", category: "Income", date: "2024-02-20", amount: 3500, type: "income" },
-  { icon: "UT", title: "Electric Bill", category: "Utilities", date: "2024-02-19", amount: 89.99, type: "expense" },
-  { icon: "TR", title: "Gas", category: "Transportation", date: "2024-02-18", amount: 45, type: "expense" },
-  { icon: "FD", title: "Restaurant", category: "Food", date: "2024-02-17", amount: 62.3, type: "expense" },
+  { icon: "FD", title: "Grocery Shopping - HyperMart", category: "Food", date: "2026-04-25", amount: 2850.50, type: "expense" },
+  { icon: "IN", title: "Monthly Salary", category: "Income", date: "2026-04-01", amount: 85000, type: "income" },
+  { icon: "UT", title: "Electricity Bill - LESCO", category: "Utilities", date: "2026-04-20", amount: 4200, type: "expense" },
+  { icon: "TR", title: "Uber Ride to Office", category: "Transportation", date: "2026-04-24", amount: 450, type: "expense" },
+  { icon: "FD", title: "Lunch at Food Court", category: "Food", date: "2026-04-24", amount: 320, type: "expense" },
+  { icon: "SH", title: "New Laptop Bag", category: "Shopping", date: "2026-04-22", amount: 2500, type: "expense" },
+  { icon: "HL", title: "Doctor Consultation", category: "Health", date: "2026-04-18", amount: 1500, type: "expense" },
+  { icon: "UT", title: "Internet Bill - PTCL", category: "Utilities", date: "2026-04-15", amount: 2800, type: "expense" },
+  { icon: "TR", title: "Fuel for Car", category: "Transportation", date: "2026-04-12", amount: 3500, type: "expense" },
+  { icon: "FD", title: "Dinner at Restaurant", category: "Food", date: "2026-04-10", amount: 1200, type: "expense" },
 ];
 
 const defaultCard = {
-  holder: "User Name",
-  bank: "AI Personal Finance",
-  number: "**** **** **** 9087",
-  expiry: "09/28",
+  holder: "Ahmed Khan",
+  bank: "Habib Bank Limited",
+  number: "**** **** **** 4567",
+  expiry: "12/28",
   cvvMasked: "***",
   brand: "VISA",
+  balance: 127350,
 };
 
 const emptyCard = {
@@ -50,6 +56,7 @@ const emptyCard = {
   expiry: "",
   cvvMasked: "***",
   brand: "Secure",
+  balance: 0,
 };
 
 const defaultSettings = {
@@ -64,8 +71,20 @@ const iconByCategory = {
   Transportation: "TR",
   Shopping: "SH",
   Health: "HL",
+  Entertainment: "EN",
+  Education: "ED",
+  Insurance: "IN",
   Other: "OT",
-  Income: "IN",
+};
+
+const initialExpenseForm = {
+  title: "",
+  category: "Food",
+  date: "",
+  amount: "",
+  method: "Cash",
+  merchant: "",
+  note: "",
 };
 
 const features = [
@@ -111,24 +130,33 @@ const authSlides = [
     title: "Watch your monthly spending like a live finance studio.",
     text: "Monitor expenses, compare categories, and stay clear about where your money is going.",
     theme: "expenses",
+    code: "TR",
     stat: "PKR 24,359",
     note: "Current balance",
+    previewA: { label: "Wallet", value: "PKR 18k saved" },
+    previewB: { label: "Budget", value: "Food 82% used" },
   },
   {
     eyebrow: "AI Prediction",
     title: "Get forecast-style insights before your next month starts.",
     text: "Predict future expense trends, spot risky categories, and improve savings planning faster.",
     theme: "prediction",
+    code: "AI",
     stat: "82%",
     note: "Budget accuracy",
+    previewA: { label: "Forecast", value: "Next month PKR 34k" },
+    previewB: { label: "Insight", value: "Dining can be reduced" },
   },
   {
     eyebrow: "Secure Finance",
     title: "Keep accounts, cards, and reports in one secure personal dashboard.",
     text: "From login to report download and chatbot guidance, everything stays connected in one flow.",
     theme: "security",
+    code: "SC",
     stat: "01 Linked",
     note: "Protected ATM card",
+    previewA: { label: "Card", value: "1 ATM linked safely" },
+    previewB: { label: "Report", value: "Ready for download" },
   },
 ];
 
@@ -429,6 +457,11 @@ function App() {
   const [chatHistory, setChatHistory] = usePersistentState(STORAGE_KEYS.chat, []);
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [theme, setTheme] = usePersistentState("app_theme", "light");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     let mounted = true;
@@ -480,7 +513,7 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
+      <Route path="/" element={<LandingPage theme={theme} setTheme={setTheme} />} />
       <Route path="/login" element={<AuthPage mode="login" user={user} setUser={setUser} setExpenses={setExpenses} setCard={setCard} setSettings={setSettings} setChatHistory={setChatHistory} setIsAuthenticated={setIsAuthenticated} />} />
       <Route path="/signup" element={<Navigate to="/login?mode=signup" replace />} />
       <Route
@@ -510,7 +543,7 @@ function App() {
   );
 }
 
-function LandingPage() {
+function LandingPage({ theme, setTheme }) {
   usePageMeta("AI Personal Finance | Smart Decisions", "landing-page");
   const [heroSlide, setHeroSlide] = useState(0);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
@@ -544,9 +577,41 @@ function LandingPage() {
   return (
     <div className="page-shell">
       <header className="finance-nav landing-reveal landing-reveal-nav" data-aos="fade-down" data-aos-duration="900">
-        <a className="brand finance-brand" href="#home"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span></a>
+        <a className="brand finance-brand" href="#home">
+          <span className="brand-mark">
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="56" height="56" rx="16" fill="url(#brandGradient)"/>
+              <defs>
+                <linearGradient id="brandGradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#3b82f6"/>
+                  <stop offset="100%" stopColor="#1d4ed8"/>
+                </linearGradient>
+              </defs>
+              <circle cx="28" cy="18" r="6" fill="#ffffff" opacity="0.9"/>
+              <rect x="16" y="28" width="24" height="2" rx="1" fill="#ffffff" opacity="0.9"/>
+              <path d="M20 32v4c0 2 1 3 3 3h10c2 0 3-1 3-3v-4" stroke="#ffffff" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.9"/>
+              <rect x="24" y="38" width="3" height="4" rx="1" fill="#ffffff" opacity="0.9"/>
+              <rect x="29" y="38" width="3" height="4" rx="1" fill="#ffffff" opacity="0.9"/>
+            </svg>
+          </span>
+          <span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span>
+        </a>
         <nav className="nav-links finance-links"><a href="#home">Home</a><a href="#features">Features</a><a href="#about">About</a><a href="#team">Team</a><a href="#contact">Contact</a></nav>
-        <div className="nav-actions"><Link className="btn btn-finance-ghost" to="/login">Login</Link><Link className="btn btn-finance-primary" to="/login?mode=signup">Create Account</Link></div>
+        <div className="nav-actions">
+          <button className="theme-toggle" onClick={() => setTheme(theme === "light" ? "dark" : "light")} aria-label="Toggle theme">
+            {theme === "light" ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v6M12 17v6M23 12h-6M7 12H1M20.485 3.515l-4.243 4.243M7.758 19.77l-4.243 4.243M20.485 20.485l-4.243-4.243M7.758 7.757L3.515 3.514" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              </svg>
+            )}
+          </button>
+          <Link className="btn btn-finance-ghost" to="/login">Login</Link><Link className="btn btn-finance-primary" to="/login?mode=signup">Create Account</Link>
+        </div>
       </header>
 
       <main className="finance-landing">
@@ -744,21 +809,26 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
     AOS.refresh();
   }, [isLogin]);
   const [form, setForm] = useState({ name: user.name, email: user.email, password: "", confirmPassword: "" });
-  const [activeSlide, setActiveSlide] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorText, setErrorText] = useState("");
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [imageSlideIndex, setImageSlideIndex] = useState(0);
+  const showcaseSlide = authSlides[0]; // Same for both login and signup
+
+  const images = [
+    "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=300&h=200&fit=crop",
+    "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=300&h=200&fit=crop",
+    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=300&h=200&fit=crop",
+  ];
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveSlide((current) => (current + 1) % authSlides.length);
-    }, 3200);
-
-    return () => window.clearInterval(timer);
+    const timer = setInterval(() => {
+      setImageSlideIndex(prev => (prev + 1) % images.length);
+    }, 3000);
+    return () => clearInterval(timer);
   }, []);
-
-  const currentSlide = authSlides[activeSlide];
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -819,40 +889,62 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
     await handleSocialAuth({ name: fallbackName, email: fallbackEmail });
   };
 
-  const handleFacebookAuth = async () => {
-    const fallbackName = isLogin ? user.name : (form.name.trim() || "Facebook User");
-    const fallbackEmail = form.email.trim() || "facebookuser@aifinance.com";
-    await handleSocialAuth({ name: fallbackName, email: fallbackEmail });
-  };
-
   return (
-    <div className={`auth-shell ${isLogin ? "auth-shell-login" : "auth-shell-signup"} auth-slide-${activeSlide}`}>
+    <div className={`auth-shell ${isLogin ? "auth-shell-login" : "auth-shell-signup"}`}>
       <section className="auth-panel auth-info auth-showcase auth-reveal auth-reveal-showcase" data-aos="fade-right" data-aos-duration="900">
         <div className="auth-showcase-top" data-aos="fade-down" data-aos-delay="40">
           <Link className="brand auth-brand-dark" to="/"><span className="brand-mark"><span className="brand-mark-ring"></span><span className="brand-mark-bars"><span></span><span></span><span></span></span><span className="brand-mark-arrow"></span><span className="brand-mark-core"></span></span><span className="brand-lockup"><strong className="brand-name">AI Personal Finance</strong><small className="brand-sub">Plan smarter. Spend better.</small></span></Link>
           <span className="auth-showcase-chip">{isLogin ? "Secure Access" : "New Account"}</span>
         </div>
         <div className="auth-showcase-copy" data-aos="fade-up" data-aos-delay="90">
-          <p className="auth-slider-tag">{currentSlide.eyebrow}</p>
-          <h1>{isLogin ? "One place for your money, reports, and AI help." : "Create your finance space in seconds."}</h1>
-          <h3 className="auth-slider-title">{currentSlide.title}</h3>
-          <p className="auth-copy">{isLogin ? "Log in to review expenses, budgets, linked cards, settings, and AI predictions without jumping between screens." : "Register once and move directly into your personal finance dashboard with transactions, reports, and AI insights ready to use."}</p>
-          <div className="auth-dots" aria-hidden="true">{authSlides.map((slide, index) => <button key={slide.theme} type="button" className={index === activeSlide ? "active" : ""} onClick={() => setActiveSlide(index)} aria-label={`Show slide ${index + 1}`}></button>)}</div>
+          <p className="auth-slider-tag">{showcaseSlide.eyebrow}</p>
+          <h1>{isLogin ? "Access your finance workspace with confidence." : "Create your personal finance workspace in minutes."}</h1>
+          <h3 className="auth-slider-title">{showcaseSlide.title}</h3>
+          <p className="auth-copy">{isLogin ? "Sign in to view spending analytics, reports, secure card details, and AI guidance from one polished dashboard." : "Register once and move directly into your smart finance dashboard with transactions, reports, and AI insights ready to use."}</p>
+          <div className="auth-hero-metrics">
+            <article className="auth-hero-metric">
+              <span>Live forecast</span>
+              <strong>PKR 34k</strong>
+            </article>
+            <article className="auth-hero-metric">
+              <span>Security</span>
+              <strong>Protected card vault</strong>
+            </article>
+            <article className="auth-hero-metric">
+              <span>Reports</span>
+              <strong>Instant dashboard export</strong>
+            </article>
+          </div>
+          <div className="auth-feature-stack">
+            <article className="auth-feature-tile">
+              <span>Forecast</span>
+              <strong>{showcaseSlide.previewA.value}</strong>
+            </article>
+            <article className="auth-feature-tile">
+              <span>Insight</span>
+              <strong>{showcaseSlide.previewB.value}</strong>
+            </article>
+            <article className="auth-feature-tile">
+              <span>Access</span>
+              <strong>{isLogin ? "Secure Google sign in" : "Fast account setup"}</strong>
+            </article>
+          </div>
         </div>
-        <div className={`auth-visual-stage auth-visual-stage-${currentSlide.theme}`} aria-hidden="true" data-aos="zoom-in" data-aos-delay="150">
+        <div className={`auth-visual-stage auth-visual-stage-${showcaseSlide.theme}`} aria-hidden="true" data-aos="zoom-in" data-aos-delay="150">
           <div className="auth-stage-orb auth-stage-orb-a"></div>
           <div className="auth-stage-orb auth-stage-orb-b"></div>
           <div className="auth-media-shell">
             <div className="auth-media-topbar"><span></span><span></span><span></span></div>
-            <div className={`auth-media auth-media-${currentSlide.theme}`}>
+            <div className={`auth-media auth-media-${showcaseSlide.theme}`}>
               <div className="auth-media-header">
-                <span>{currentSlide.eyebrow}</span>
-                <strong>{currentSlide.note}</strong>
+                <span>{showcaseSlide.eyebrow}</span>
+                <strong>{showcaseSlide.note}</strong>
               </div>
               <div className="auth-media-body">
+                <img src={images[imageSlideIndex]} alt="Finance Slide" className="auth-slide-image" />
                 <div className="media-card media-card-balance">
-                  <span>{currentSlide.note}</span>
-                  <strong>{currentSlide.stat}</strong>
+                  <span>{showcaseSlide.note}</span>
+                  <strong>{showcaseSlide.stat}</strong>
                 </div>
                 <div className="media-card media-card-chart">
                   <div className="media-chart-bars"><span></span><span></span><span></span><span></span></div>
@@ -872,20 +964,30 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             </div>
           </div>
           <div className="auth-floating-card balance-card" data-aos="fade-right" data-aos-delay="220">
-            <span>{currentSlide.note}</span>
-            <strong>{currentSlide.stat}</strong>
+            <span>{showcaseSlide.note}</span>
+            <strong>{showcaseSlide.stat}</strong>
             <p>Live finance preview</p>
           </div>
           <div className="auth-floating-card ring-card" data-aos="fade-left" data-aos-delay="280">
             <div className="mini-donut">
-              <div className="mini-donut-center"><strong>{activeSlide === 0 ? "34" : activeSlide === 1 ? "82" : "01"}</strong><span>{activeSlide === 0 ? "Food" : activeSlide === 1 ? "AI" : "Card"}</span></div>
+              <div className="mini-donut-center"><strong>{isLogin ? "82" : "34"}</strong><span>{isLogin ? "AI" : "Food"}</span></div>
             </div>
           </div>
           <div className="auth-floating-card upload-card" data-aos="fade-up" data-aos-delay="340">
-            <div className="upload-icon">{activeSlide === 2 ? "SC" : activeSlide === 1 ? "AI" : "CD"}</div>
+            <div className="upload-icon">{showcaseSlide.code}</div>
             <div>
-              <strong>{activeSlide === 0 ? "Expense overview" : activeSlide === 1 ? "Prediction ready" : "Secure access"}</strong>
-              <p>{activeSlide === 0 ? "Track and compare daily spending." : activeSlide === 1 ? "See next month forecast instantly." : "Your profile and cards stay protected."}</p>
+              <strong>{isLogin ? "Prediction ready" : "Expense overview"}</strong>
+              <p>{isLogin ? "See next month forecast instantly." : "Track and compare daily spending."}</p>
+            </div>
+          </div>
+          <div className={`auth-visual-caption auth-visual-caption-${showcaseSlide.theme}`}>
+            <div className="auth-visual-caption-card">
+              <span>{showcaseSlide.previewA.label}</span>
+              <strong>{showcaseSlide.previewA.value}</strong>
+            </div>
+            <div className="auth-visual-caption-card">
+              <span>{showcaseSlide.previewB.label}</span>
+              <strong>{showcaseSlide.previewB.value}</strong>
             </div>
           </div>
           <div className="auth-glow auth-glow-a"></div>
@@ -897,21 +999,36 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             <span>AI predictor</span>
             <span>Secure card vault</span>
           </div>
-          <div className="auth-photo-row" aria-hidden="true">
-            <div className="auth-photo-card auth-photo-card-one" data-aos="fade-up" data-aos-delay="220"></div>
-            <div className="auth-photo-card auth-photo-card-two" data-aos="fade-up" data-aos-delay="280"></div>
-            <div className="auth-photo-card auth-photo-card-three" data-aos="fade-up" data-aos-delay="340"></div>
-          </div>
+          <p className="auth-support-copy">{isLogin ? "Built for finance students and real-world expense planning." : "Create an account and start managing your money with clearer structure."}</p>
         </div>
       </section>
       <section className="auth-panel auth-form-panel auth-reveal auth-reveal-form" data-aos="fade-left" data-aos-duration="900">
+        <div className="auth-banner">
+          <h4>Secure Finance Dashboard</h4>
+          <p>Manage your expenses with AI insights</p>
+        </div>
+        <div className="auth-form-side-images">
+          <img src={images[0]} alt="Expense Tracking" />
+          <img src={images[1]} alt="AI Insights" />
+        </div>
         <div className="auth-card" data-aos="zoom-in" data-aos-delay="100">
           <div className="auth-card-head" data-aos="fade-down" data-aos-delay="140">
+            <h3>Welcome to AI Personal Finance</h3>
             <p className="form-tag">{isLogin ? "Login" : "Create Account"}</p>
             <span className="auth-head-badge">{isLogin ? "Protected Access" : "Secure Setup"}</span>
           </div>
           <h2 data-aos="fade-up" data-aos-delay="180">{isLogin ? "Welcome back to your finance dashboard" : "Set up your account and continue"}</h2>
           <p className="auth-form-copy" data-aos="fade-up" data-aos-delay="220">{isLogin ? "Use your email and password to access dashboard insights, saved cards, reports, and the AI predictor." : "Register with your details and continue into the dashboard with your own finance profile."}</p>
+          <div className="auth-form-meta" data-aos="fade-up" data-aos-delay="240">
+            <div className="auth-form-meta-item">
+              <span>Workspace</span>
+              <strong>{isLogin ? "Dashboard + AI tools" : "Smart finance setup"}</strong>
+            </div>
+            <div className="auth-form-meta-item">
+              <span>Access style</span>
+              <strong>{isLogin ? "Email or Google sign in" : "Quick secure onboarding"}</strong>
+            </div>
+          </div>
           <form className="auth-form" onSubmit={handleSubmit} data-aos="fade-up" data-aos-delay="260">
             {!isLogin ? <label>Full Name<input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} type="text" placeholder="Enter your full name" required /></label> : null}
             <label>Email Address<input value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} type="email" placeholder="you@example.com" required /></label>
@@ -922,9 +1039,8 @@ function AuthPage({ mode, user, setUser, setExpenses, setCard, setSettings, setC
             <button className="btn btn-primary auth-submit" type="submit" disabled={submitting}>{submitting ? "Please wait..." : isLogin ? "Sign In" : "Register Now"}</button>
           </form>
           <div className="auth-divider" data-aos="fade-up" data-aos-delay="300"><span>or continue with</span></div>
-          <div className="auth-socials" data-aos="fade-up" data-aos-delay="340">
+          <div className="auth-socials auth-socials-single" data-aos="fade-up" data-aos-delay="340">
             <button className="auth-social-btn auth-social-btn-google" type="button" onClick={handleGoogleAuth} disabled={submitting}><span className="social-logo social-logo-google">G</span> Continue with Google</button>
-            <button className="auth-social-btn auth-social-btn-facebook" type="button" onClick={handleFacebookAuth} disabled={submitting}><span className="social-logo social-logo-facebook">f</span> Continue with Facebook</button>
           </div>
           <div className="auth-trust-row" data-aos="fade-up" data-aos-delay="380">
             <span>Encrypted login</span>
@@ -943,6 +1059,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const navigate = useNavigate();
   const prediction = useMemo(() => buildPrediction(expenses), [expenses]);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [chatbotOpen, setChatbotOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [chatbotLanguage, setChatbotLanguage] = useState("roman-ur");
@@ -958,7 +1075,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const [cardMessageType, setCardMessageType] = useState("info");
   const [toast, setToast] = useState(null);
   const [editingTransaction, setEditingTransaction] = useState(null);
-  const [expenseForm, setExpenseForm] = useState({ title: "", category: "Food", date: "", amount: "" });
+  const [expenseForm, setExpenseForm] = useState(initialExpenseForm);
   const [profileForm, setProfileForm] = useState({
     name: user.name,
     email: user.email,
@@ -970,7 +1087,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     dob: user.dob,
     language: user.language,
   });
-  const [cardForm, setCardForm] = useState({ holder: "", bank: "", number: "", expiry: "", cvv: "", zip: "" });
+  const [cardForm, setCardForm] = useState({ holder: "", bank: "", number: "", expiry: "", cvv: "", zip: "", balance: "" });
   const messagesRef = useRef(null);
   const recognitionRef = useRef(null);
   const expenseOnly = useMemo(() => expenses.filter((item) => item.type !== "income"), [expenses]);
@@ -1032,12 +1149,12 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
   const savingsRate = prediction.income ? Math.max(0, Math.round((prediction.savings / prediction.income) * 100)) : 0;
   const accountHealth = Math.max(72, Math.min(96, Math.round((savingsRate + (settings.budgetAlerts ? 12 : 4) + (card?.number ? 8 : 0)) / 1.3)));
   const recentTransactions = expenses.slice(0, 6);
-  const liveCardBrand = detectCardBrand(cardForm.number);
   const liveCardDigits = onlyDigits(cardForm.number);
-  const liveCardNumber = cardForm.number || "**** **** **** 9087";
-  const liveCardHolder = cardForm.holder || user.name || "Card Holder";
-  const liveCardBank = cardForm.bank || "AI Personal Finance";
-  const liveCardExpiry = cardForm.expiry || "09/28";
+  const liveCardBrand = cardForm.number ? detectCardBrand(cardForm.number) : card.brand || "Secure";
+  const liveCardNumber = cardForm.number || card.number || "**** **** **** 9087";
+  const liveCardHolder = cardForm.holder || card.holder || user.name || "Card Holder";
+  const liveCardBank = cardForm.bank || card.bank || "AI Personal Finance";
+  const liveCardExpiry = cardForm.expiry || card.expiry || "09/28";
   const cardChecks = [
     { label: "Holder name added", passed: cardForm.holder.trim().length > 2 },
     { label: "16-digit card number", passed: liveCardDigits.length === 16 },
@@ -1083,6 +1200,16 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     { title: "Reports Ready", value: "03 exports", note: "Finance summaries can be downloaded any time" },
     { title: "Security Layer", value: card?.number ? "Card protected" : "No card linked", note: "Masked card preview and account controls are active" },
   ];
+  const expenseDraftAmount = Number(expenseForm.amount || 0);
+  const projectedTotalAfterEntry = prediction.expense + (editingTransaction !== null ? 0 : expenseDraftAmount);
+  const selectedPlannerRow = plannerRows.find((item) => item.label === expenseForm.category) || plannerRows[plannerRows.length - 1];
+  const expenseMethodLabels = {
+    Cash: "Good for daily small purchases",
+    DebitCard: "Best for bank-linked household spending",
+    CreditCard: "Track carefully to avoid month-end rollover",
+    BankTransfer: "Useful for bills, rent, and recurring payments",
+    MobileWallet: "Suitable for instant utility and top-up spending",
+  };
 
   useEffect(() => {
     const close = () => setProfileOpen(false);
@@ -1227,10 +1354,13 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       category: expenseForm.category,
       date: expenseForm.date,
       amount: Number(expenseForm.amount),
+      method: expenseForm.method,
+      merchant: expenseForm.merchant.trim() || "Manual Entry",
+      note: expenseForm.note.trim(),
       type: "expense",
     };
     if (editingTransaction !== null) {
-      setExpenses((current) => current.map((entry, index) => index === editingTransaction ? item : entry));
+      setExpenses((current) => current.map((entry, index) => (index === editingTransaction ? item : entry)));
       setEditingTransaction(null);
       showToast("success", "Transaction updated successfully.");
     } else {
@@ -1239,7 +1369,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       window.setTimeout(() => setFlashFirst(false), 1200);
       showToast("success", "New expense added to recent transactions.");
     }
-    setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
+    setExpenseForm(initialExpenseForm);
     addChat("bot", `Naya expense "${item.title}" add ho gaya. Updated projection ${formatCurrency(buildPrediction([item, ...expenses]).projectedExpense)} ke qareeb hai.`);
   };
 
@@ -1273,18 +1403,21 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     setCardMessage("");
     setCardMessageType("info");
     setEditingTransaction(null);
-    setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
+    setExpenseForm(initialExpenseForm);
     showToast("success", "Dashboard reset. All finance values are now empty and ready for fresh entries.");
   };
 
   const editTransaction = (index) => {
     const item = expenses[index];
-    if (!item || item.type === "income") return;
+    if (!item) return;
     setExpenseForm({
       title: item.title,
       category: item.category,
       date: item.date,
       amount: String(item.amount),
+      method: item.method || "Cash",
+      merchant: item.merchant || "",
+      note: item.note || "",
     });
     setEditingTransaction(index);
     document.getElementById("manual-expense")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1296,7 +1429,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
     setExpenses((current) => current.filter((_, currentIndex) => currentIndex !== index));
     if (editingTransaction === index) {
       setEditingTransaction(null);
-      setExpenseForm({ title: "", category: "Food", date: "", amount: "" });
+      setExpenseForm(initialExpenseForm);
     }
     showToast("success", `"${item?.title || "Transaction"}" removed successfully.`);
   };
@@ -1328,6 +1461,12 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       setCardMessage("Billing ZIP / postal code should be at least 4 digits.");
       return;
     }
+    const balanceValue = Number(cardForm.balance);
+    if (cardForm.balance.trim() === "" || Number.isNaN(balanceValue) || balanceValue < 0) {
+      setCardMessageType("error");
+      setCardMessage("Please enter a valid card balance.");
+      return;
+    }
     setCard({
       holder: cardForm.holder,
       bank: cardForm.bank,
@@ -1335,10 +1474,11 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
       expiry: cardForm.expiry,
       cvvMasked: cardForm.cvv.replace(/\d/g, "*"),
       brand: detectCardBrand(cardForm.number),
+      balance: balanceValue,
     });
-    setCardForm({ holder: user.name || "", bank: "", number: "", expiry: "", cvv: "", zip: "" });
+    setCardForm({ holder: user.name || "", bank: "", number: "", expiry: "", cvv: "", zip: "", balance: "" });
     setCardMessageType("success");
-    setCardMessage("ATM / debit card added successfully. Masked preview, brand detection, and secure status have been updated.");
+    setCardMessage("ATM / debit card added successfully. Masked preview, brand detection, secure status, and balance have been updated.");
   };
 
   const downloadReport = () => {
@@ -1389,24 +1529,209 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
 
       <main className="dashboard-main">
         <header className="dashboard-topbar" id="dashboard">
-          <div className="dashboard-heading"><p className="dashboard-kicker">Overview</p><h2>Welcome back, {user.name}</h2><p className="dashboard-intro">Your account, reports, cards, predictions, and transactions are now connected in one live finance workspace.</p></div>
+          <div className="dashboard-heading">
+            <div className="greeting-section">
+              <p className="dashboard-kicker">Good morning, Ahmed! 👋</p>
+              <h2>Here's your financial overview</h2>
+              <p className="dashboard-intro">You have 3 pending notifications and your account is in good health.</p>
+            </div>
+            <div className="header-actions">
+              <div className="notification-bell">
+                <button className="bell-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
+                  <span className="bell-icon">🔔</span>
+                  <span className="notification-count">3</span>
+                </button>
+                {notificationsOpen && (
+                  <div className="notifications-dropdown">
+                    <div className="notifications-header">
+                      <h4>Notifications</h4>
+                      <button onClick={() => setNotificationsOpen(false)}>×</button>
+                    </div>
+                    <div className="notifications-list">
+                      <div className="notification-item warning">
+                        <div className="notification-icon">⚠️</div>
+                        <div className="notification-content">
+                          <p>Electricity bill due in 3 days</p>
+                          <span className="notification-time">2 hours ago</span>
+                        </div>
+                      </div>
+                      <div className="notification-item info">
+                        <div className="notification-icon">📈</div>
+                        <div className="notification-content">
+                          <p>15% savings increase this month</p>
+                          <span className="notification-time">1 day ago</span>
+                        </div>
+                      </div>
+                      <div className="notification-item success">
+                        <div className="notification-icon">💰</div>
+                        <div className="notification-content">
+                          <p>Salary credited successfully</p>
+                          <span className="notification-time">3 days ago</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="quick-actions">
+                <button className="quick-action-btn primary" onClick={() => document.getElementById('manual-expense')?.scrollIntoView({ behavior: 'smooth' })}>
+                  <span>+</span> Add Expense
+                </button>
+                <button className="quick-action-btn secondary" onClick={() => downloadReport()}>
+                  📊 Report
+                </button>
+              </div>
+            </div>
+          </div>
           <div className="topbar-status-strip">
-            <div className="topbar-status-card"><span>Account Health</span><strong>{accountHealth}/100</strong></div>
-            <div className="topbar-status-card"><span>Budget Used</span><strong>{budgetUsed}%</strong></div>
-            <div className="topbar-status-card"><span>Live Status</span><strong>All systems active</strong></div>
+            <div className="topbar-status-card">
+              <span>Account Health</span>
+              <strong>{accountHealth}/100</strong>
+              <div className="health-indicator">
+                <div className="health-bar" style={{width: `${accountHealth}%`}}></div>
+              </div>
+            </div>
+            <div className="topbar-status-card">
+              <span>Budget Used</span>
+              <strong>{budgetUsed}%</strong>
+              <div className="budget-indicator">
+                <div className={`budget-bar ${budgetUsed > 80 ? 'warning' : budgetUsed > 60 ? 'caution' : 'good'}`} style={{width: `${budgetUsed}%`}}></div>
+              </div>
+            </div>
+            <div className="topbar-status-card">
+              <span>Live Status</span>
+              <strong>All systems active</strong>
+              <div className="status-dot active"></div>
+            </div>
           </div>
           <div className="profile-menu" onClick={(e) => e.stopPropagation()}>
-            <button className="profile-pill profile-trigger" type="button" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}><div className={`profile-avatar ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : null}</div><span>{user.name.split(" ")[0]}</span></button>
-            {!profileOpen ? null : <div className="profile-dropdown"><div className="profile-dropdown-head"><div className={`profile-avatar small ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : initial}</div><div><strong>{user.name}</strong><p>{user.email}</p></div></div><div className="profile-dropdown-links"><a href="#user-account">My Profile</a><a href="#settings">Security & Settings</a><a href="#card-form">Linked Cards</a><a href="#analytical">Insights</a><button type="button" onClick={handleLogout}>{loggingOut ? "Logging out..." : "Logout"}</button></div></div>}
+            <button className="profile-pill profile-trigger" type="button" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>
+              <div className={`profile-avatar ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : null}</div>
+              <span>{user.name.split(" ")[0]}</span>
+            </button>
+            {!profileOpen ? null : <div className="profile-dropdown">
+              <div className="profile-dropdown-head">
+                <div className={`profile-avatar small ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : initial}</div>
+                <div><strong>{user.name}</strong><p>{user.email}</p></div>
+              </div>
+              <div className="profile-dropdown-links">
+                <a href="#user-account">My Profile</a>
+                <a href="#settings">Security & Settings</a>
+                <a href="#card-form">Linked Cards</a>
+                <a href="#analytical">Insights</a>
+                <button type="button" onClick={handleLogout}>{loggingOut ? "Logging out..." : "Logout"}</button>
+              </div>
+            </div>}
           </div>
         </header>
 
         <section className="stats-row"><article className="stat-card"><p>Total Income</p><strong>{formatCurrency(prediction.income)}</strong><span className="stat-note">Primary monthly inflow across your saved records</span></article><article className="stat-card"><p>Total Expense</p><strong>{formatCurrency(prediction.expense)}</strong><span className="stat-note">{expenseOnly.length} tracked expense entries are included in this summary</span></article><article className="stat-card"><p>Savings</p><strong>{formatCurrency(prediction.savings)}</strong><span className="stat-note">Current savings rate is {savingsRate}% based on your latest totals</span></article></section>
-        <section className="dashboard-card quick-grid" id="wallet"><article className="quick-card"><div className="quick-icon">WA</div><div><p>Wallet Balance</p><strong>{formatCurrency(Math.max(prediction.savings, 0))}</strong></div></article><article className="quick-card"><div className="quick-icon">CA</div><div><p>Cards Active</p><strong>{card?.number ? "01 Linked Card" : "00 Linked Cards"}</strong></div></article><article className="quick-card"><div className="quick-icon">GO</div><div><p>Goal Progress</p><strong>76% Completed</strong></div></article></section>
+        <section className="dashboard-card quick-grid" id="wallet"><article className="quick-card"><div className="quick-icon">WA</div><div><p>Wallet Balance</p><strong>{formatCurrency(Math.max(prediction.savings, 0))}</strong></div></article><article className="quick-card"><div className="quick-icon">CB</div><div><p>Card Balance</p><strong>{card?.number ? formatCurrency(card.balance) : "PKR 0.00"}</strong></div></article><article className="quick-card"><div className="quick-icon">GO</div><div><p>Goal Progress</p><strong>76% Completed</strong></div></article></section>
         <section className="dashboard-card chart-wrap" id="transactions"><div className="card-header two-col"><div><h2>Monthly Expense</h2><p className="section-copy">Track your current spending curve, projected total, and top category pressure in one view.</p></div><div><h2>Category Wise Expense</h2><p className="section-copy">Live split of your most expensive categories based on current saved records.</p></div></div><div className="chart-grid"><div className="line-chart"><div className="y-axis"><span>PKR 35,000</span><span>PKR 30,000</span><span>PKR 25,000</span><span>PKR 20,000</span><span>PKR 10,000</span></div><div className="line-chart-stack"><div className="chart-metrics"><div className="chart-metric-card"><span>Projected</span><strong>{formatCurrency(prediction.projectedExpense)}</strong></div><div className="chart-metric-card"><span>Possible Save</span><strong>{formatCurrency(prediction.possibleSaving)}</strong></div><div className="chart-metric-card"><span>Top Category</span><strong>{prediction.topCategory}</strong></div></div><div className="plot-area"><div className="chart-summary-pill"><span>Current Spend</span><strong>{formatCurrency(prediction.expense)}</strong></div><svg viewBox="0 0 600 260" preserveAspectRatio="none"><defs><linearGradient id="expenseAreaGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4a87ff" stopOpacity="0.3"></stop><stop offset="100%" stopColor="#4a87ff" stopOpacity="0.02"></stop></linearGradient></defs><path className="area-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110 L590 260 L20 260 Z" /><path className="line-path" d="M20 220 C65 220, 85 155, 130 168 S210 225, 255 160 S340 115, 385 125 S465 35, 510 80 S565 155, 590 110" /><g className="point-group">{monthlySeries.map((point, index) => <g key={point.label}><circle cx={point.x} cy={point.y} r={index === monthlySeries.length - 1 ? 6 : 5}></circle><text className="point-value-label" x={point.x} y={point.y - 14}>{Math.round(point.value / 1000)}k</text></g>)}</g></svg><div className="x-axis">{monthlySeries.map((point) => <span key={point.label}>{point.label}</span>)}</div></div><div className="mini-compare-chart"><div className="mini-compare-head"><span>Monthly Compare</span><strong>Spent vs Target</strong></div><div className="mini-bars">{monthlySeries.map((point, index) => <div className="mini-bar-col" key={point.label}><div className="mini-bar-track"><div className={`mini-bar-fill ${index >= monthlySeries.length - 2 ? "mini-bar-fill-accent" : ""}`} style={{ height: `${Math.max(24, Math.round((point.value / 32000) * 100))}%` }}></div></div><small>{point.label}</small></div>)}</div></div></div></div><div className="category-chart-wrap"><div className="category-chart-card"><div className="category-chart-top"><span>Top Categories</span><strong>Expense Split</strong></div><div className="category-bars">{categoryOverview.map((item) => <div className="category-bar-card" key={item.label}><div className="category-bar-head"><span>{item.label}</span><strong>{item.percent}%</strong></div><div className="category-track"><div className={`category-fill ${item.color}`} style={{ width: `${item.width}%` }}></div></div><small>{item.note}</small></div>)}</div></div><div className="category-summary">{categoryOverview.map((item) => <div className="legend-item comparison-legend-item" key={item.label}><div><strong>{item.label}</strong><span>{formatCurrency(item.spent)} spent from {formatCurrency(item.budget)} budget</span></div><span className={`comparison-badge ${item.color}`}>{Math.round((item.spent / item.budget) * 100)}%</span></div>)}</div></div></div></section>
         <section className="dashboard-card bars-card" id="reports"><div className="card-header section-inline"><div><h2>Budget vs. Spending Report</h2><p className="report-subtext">Download a full finance summary based on your current dashboard data.</p></div><button className="btn btn-primary report-download-btn" type="button" onClick={downloadReport}>Download Report</button></div><div className="report-highlight-grid"><div className="report-highlight-card"><span>Safe Spending Target</span><strong>{formatCurrency(prediction.safeBudget)}</strong><p>Recommended ceiling if you want better savings control next month.</p></div><div className="report-highlight-card"><span>Category Pressure</span><strong>{prediction.topCategory}</strong><p>{prediction.topCategory} is currently the category to watch most closely.</p></div><div className="report-highlight-card"><span>Goal Window</span><strong>{formatCurrency(prediction.possibleSaving)}</strong><p>Possible amount you can protect by reducing low-priority expenses.</p></div></div><div className="report-export-strip"><div className="report-export-card"><strong>TXT Export</strong><span>Fast summary for viva and quick review</span></div><div className="report-export-card"><strong>Live Finance Snapshot</strong><span>Includes totals, top category, and recent transactions</span></div><div className="report-export-card"><strong>Submission Friendly</strong><span>Simple printable output with PKR values</span></div></div><div className="double-panels">{categoryOverview.map((item) => <div className="budget-panel" key={item.label}><h2>{item.label} Budget vs. Spending</h2><div className="hbar-group"><span>Spent</span><div className="bar-track"><div className={`fill ${item.color}`} style={{ width: `${Math.min(100, Math.round((item.spent / item.budget) * 100))}%` }}></div></div></div><div className="hbar-group"><span>Remaining</span><div className="bar-track"><div className="fill neutral-fill" style={{ width: `${Math.max(8, 100 - Math.round((item.spent / item.budget) * 100))}%` }}></div></div></div><div className="range-labels"><span>{formatCurrency(0)}</span><span>{formatCurrency(item.budget / 2)}</span><span>{formatCurrency(item.budget)}</span></div></div>)}</div></section>
-        <section className="dashboard-split"><section className="dashboard-card transaction-panel"><div className="card-header section-inline"><div><h2>Recent Transactions</h2><p className="section-copy">Your latest income and expense records update the dashboard instantly.</p></div><a className="view-link" href="#transactions">View All</a></div><div className="transaction-list">{recentTransactions.map((item, index) => <article className={`transaction-item ${index === 0 && flashFirst ? "flash-new" : ""}`} key={`${item.title}-${item.date}-${index}`}><div className="transaction-main"><span className="transaction-icon">{item.icon}</span><div><strong>{item.title}</strong><p>{item.category}</p></div></div><div className="transaction-side"><div className="transaction-meta"><span>{item.date}</span><strong className={item.type === "income" ? "positive" : "negative"}>{item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}</strong></div>{item.type === "income" ? null : <div className="transaction-actions"><button type="button" className="table-action-btn" onClick={() => editTransaction(index)}>Edit</button><button type="button" className="table-action-btn danger" onClick={() => deleteTransaction(index)}>Delete</button></div>}</div></article>)}</div></section><section className="dashboard-card ai-panel" id="analytical"><div className="card-header section-inline"><div><h2>AI Features</h2><p className="section-copy">Auto-generated coaching based on your current profile, budget trend, and saved records.</p></div><span className="ai-pill">Smart Analysis</span></div><div className="insight-list">{insightCards.map((item) => <article className="insight-card" key={item.title}><div className="insight-icon">{item.icon}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}</div></section></section>
-        <section className="dashboard-split"><section className="dashboard-card manual-entry-panel" id="manual-expense"><div className="card-header section-inline"><div><h2>{editingTransaction !== null ? "Edit Expense" : "Manual Expense Add"}</h2><p className="section-copy">Add a new expense record and instantly update totals, transactions, and prediction values.</p></div><span className="status-badge light">{editingTransaction !== null ? "Edit Mode" : "Live Update"}</span></div><form className="expense-form" onSubmit={saveExpense}><label>Expense Title<input value={expenseForm.title} onChange={(e) => setExpenseForm((s) => ({ ...s, title: e.target.value }))} type="text" required /></label><label>Category<select value={expenseForm.category} onChange={(e) => setExpenseForm((s) => ({ ...s, category: e.target.value }))}><option>Food</option><option>Utilities</option><option>Transportation</option><option>Shopping</option><option>Health</option><option>Other</option></select></label><label>Date<input value={expenseForm.date} onChange={(e) => setExpenseForm((s) => ({ ...s, date: e.target.value }))} type="date" required /></label><label>Amount<input value={expenseForm.amount} onChange={(e) => setExpenseForm((s) => ({ ...s, amount: e.target.value }))} type="number" min="1" step="0.01" required /></label><div className="expense-form-actions"><button className="btn btn-primary auth-submit" type="submit">{editingTransaction !== null ? "Update Expense" : "Add Expense"}</button>{editingTransaction !== null ? <button className="btn btn-finance-ghost" type="button" onClick={() => { setEditingTransaction(null); setExpenseForm({ title: "", category: "Food", date: "", amount: "" }); }}>Cancel</button> : null}</div></form></section><section className="dashboard-card account-panel"><div className="card-header section-inline"><h2>Quick Note</h2><span className="ai-pill">Manual Tracking</span></div><div className="account-grid single-column"><div className="account-box"><p>How it works</p><strong>New expense recent transactions list ke top par add hoga.</strong></div><div className="account-box"><p>Auto update</p><strong>Total Expense aur Savings amount turant refresh ho jayegi.</strong></div><div className="account-box"><p>Planner note</p><strong>Try to keep monthly spending near {formatCurrency(prediction.safeBudget)} for a healthier savings ratio.</strong></div></div></section></section>
+        <section className="dashboard-split"><section className="dashboard-card transaction-panel"><div className="card-header section-inline"><div><h2>Recent Transactions</h2><p className="section-copy">Your latest expense records update the dashboard instantly.</p></div></div><div className="transaction-list">{recentTransactions.map((item, index) => <article className={`transaction-item ${index === 0 && flashFirst ? "flash-new" : ""}`} key={`${item.title}-${item.date}-${index}`}><div className="transaction-main"><span className="transaction-icon">{item.icon}</span><div><strong>{item.title}</strong><p>{item.category}</p></div></div><div className="transaction-side"><div className="transaction-meta"><span>{item.date}</span><strong className={item.type === "income" ? "positive" : "negative"}>{item.type === "income" ? "+" : "-"}{formatCurrency(item.amount)}</strong></div><div className="transaction-actions"><button type="button" className="table-action-btn" onClick={() => editTransaction(index)}>Edit</button><button type="button" className="table-action-btn danger" onClick={() => deleteTransaction(index)}>Delete</button></div></div></article>)}</div></section><section className="dashboard-card ai-panel" id="analytical"><div className="card-header section-inline"><div><h2>AI Features</h2><p className="section-copy">Auto-generated coaching based on your current profile, budget trend, and saved records.</p></div><span className="ai-pill">Smart Analysis</span></div><div className="insight-list">{insightCards.map((item) => <article className="insight-card" key={item.title}><div className="insight-icon">{item.icon}</div><div><strong>{item.title}</strong><p>{item.text}</p></div></article>)}</div></section></section>
+        <section className="dashboard-split">
+          <section className="dashboard-card manual-entry-panel" id="manual-expense">
+            <div className="card-header section-inline">
+              <div>
+                <h2>{editingTransaction !== null ? "Edit Entry" : "Manual Entry"}</h2>
+                <p className="section-copy">Add a new income or expense record with payment details, merchant notes, and a live finance impact preview.</p>
+              </div>
+              <span className="status-badge light">{editingTransaction !== null ? "Edit Mode" : "Live Update"}</span>
+            </div>
+            <form className="expense-form" onSubmit={saveExpense}>
+              <label>
+                Expense Title
+                <input value={expenseForm.title} onChange={(e) => setExpenseForm((s) => ({ ...s, title: e.target.value }))} type="text" placeholder="Restaurant dinner, internet bill, fuel refill" required />
+              </label>
+              <label>
+                Category
+                <select value={expenseForm.category} onChange={(e) => setExpenseForm((s) => ({ ...s, category: e.target.value }))}>
+                  <option>Food</option>
+                  <option>Utilities</option>
+                  <option>Transportation</option>
+                  <option>Shopping</option>
+                  <option>Health</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                Date
+                <input value={expenseForm.date} onChange={(e) => setExpenseForm((s) => ({ ...s, date: e.target.value }))} type="date" required />
+              </label>
+              <label>
+                Amount
+                <input value={expenseForm.amount} onChange={(e) => setExpenseForm((s) => ({ ...s, amount: e.target.value }))} type="number" min="1" step="0.01" placeholder="2500" required />
+              </label>
+              <label>
+                Payment Method
+                <select value={expenseForm.method} onChange={(e) => setExpenseForm((s) => ({ ...s, method: e.target.value }))}>
+                  <option value="Cash">Cash</option>
+                  <option value="DebitCard">Debit Card</option>
+                  <option value="CreditCard">Credit Card</option>
+                  <option value="BankTransfer">Bank Transfer</option>
+                  <option value="MobileWallet">Mobile Wallet</option>
+                </select>
+              </label>
+              <label>
+                Merchant / Source
+                <input value={expenseForm.merchant} onChange={(e) => setExpenseForm((s) => ({ ...s, merchant: e.target.value }))} type="text" placeholder="Imtiaz Store, PSO Pump, K-Electric" />
+              </label>
+              <label className="expense-form-full">
+                Notes
+                <textarea value={expenseForm.note} onChange={(e) => setExpenseForm((s) => ({ ...s, note: e.target.value }))} rows="4" placeholder="Add a short note for why this expense happened or what should be adjusted next time." />
+              </label>
+              <div className="expense-form-actions">
+                <button className="btn btn-primary auth-submit" type="submit">
+                  {editingTransaction !== null ? "Update Expense" : "Add Expense"}
+                </button>
+                {editingTransaction !== null ? (
+                  <button
+                    className="btn btn-finance-ghost"
+                    type="button"
+                    onClick={() => {
+                      setEditingTransaction(null);
+                      setExpenseForm(initialExpenseForm);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          </section>
+          <section className="dashboard-card account-panel">
+            <div className="card-header section-inline">
+              <div>
+                <h2>Entry Summary</h2>
+                <p className="section-copy">Live guidance while you prepare the next expense entry.</p>
+              </div>
+              <span className="ai-pill">Manual Tracking</span>
+            </div>
+            <div className="account-grid single-column">
+              <div className="account-box expense-helper-box">
+                <p>Preview amount</p>
+                <strong>{expenseDraftAmount > 0 ? formatCurrency(expenseDraftAmount) : "PKR 0.00"}</strong>
+                <span>{expenseForm.method ? expenseMethodLabels[expenseForm.method] : "Choose a payment method to see guidance."}</span>
+              </div>
+              <div className="account-box expense-helper-box">
+                <p>Projected total after entry</p>
+                <strong>{formatCurrency(projectedTotalAfterEntry)}</strong>
+                <span>{editingTransaction !== null ? "Editing this record updates totals without duplicating the expense." : "This estimate shows where monthly expense may move after saving."}</span>
+              </div>
+              <div className="account-box expense-helper-box">
+                <p>Category planner</p>
+                <strong>{selectedPlannerRow?.label || expenseForm.category}</strong>
+                <span>{selectedPlannerRow ? `${selectedPlannerRow.utilization}% of the suggested budget is already used. ${selectedPlannerRow.recommendation}` : `Try to keep monthly spending near ${formatCurrency(prediction.safeBudget)} for a healthier savings ratio.`}</span>
+              </div>
+              <div className="account-box expense-helper-box">
+                <p>Form checklist</p>
+                <strong>{expenseForm.title && expenseForm.date && expenseForm.amount ? "Ready to save" : "Waiting for required fields"}</strong>
+                <span>{expenseForm.merchant || expenseForm.note ? "Merchant details and notes will make future reports more useful." : "Add merchant name and a short note for clearer reports and smarter review later."}</span>
+              </div>
+            </div>
+          </section>
+        </section>
         <section className="dashboard-split">
           <section className="dashboard-card planner-panel">
             <div className="card-header section-inline"><div><h2>Budget Planner</h2><p className="section-copy">Category-level guidance to keep spending inside a healthier monthly budget range.</p></div><span className="status-badge light">Planner</span></div>
@@ -1438,7 +1763,7 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
           </section>
         </section>
         <section className="dashboard-split account-section-wrap"><section className="dashboard-card account-panel" id="user-account"><div className="card-header section-inline"><h2>User Account</h2><span className="status-badge">Verified</span></div><div className="profile-banner"><div className="profile-summary"><div className={`profile-avatar large ${user.avatar ? "has-image" : ""}`}>{user.avatar ? <img src={user.avatar} alt={user.name} /> : initial}</div><div><h3>{user.name}</h3><p>{user.email}</p><span className="mini-status">Premium Member since {user.memberSince}</span></div></div><div className="security-chip">2-Step Verification Active</div></div><div className="account-grid"><div className="account-box"><p>Phone Number</p><strong>{user.phone}</strong></div><div className="account-box"><p>CNIC / ID</p><strong>{user.cnic}</strong></div><div className="account-box"><p>Address</p><strong>{user.address}</strong></div><div className="account-box"><p>Last Login</p><strong>{user.lastLogin}</strong></div></div><div className="detail-grid"><div className="detail-card"><h3>Profile Details</h3><div className="detail-line"><span>Full Name</span><strong>{user.name}</strong></div><div className="detail-line"><span>Date of Birth</span><strong>{user.dob}</strong></div><div className="detail-line"><span>Occupation</span><strong>{user.occupation}</strong></div><div className="detail-line"><span>Preferred Currency</span><strong>{user.currency}</strong></div></div><div className="detail-card"><h3>Account Security</h3><div className="detail-line"><span>Password Status</span><strong>Updated 10 days ago</strong></div><div className="detail-line"><span>Recovery Email</span><strong>backup@aifinance.com</strong></div><div className="detail-line"><span>Device Trust</span><strong>3 trusted devices</strong></div><div className="detail-line"><span>Security Score</span><strong>92 / 100</strong></div></div><div className="detail-card"><h3>Preferences</h3><div className="detail-line"><span>Language</span><strong>{user.language}</strong></div><div className="detail-line"><span>Alerts</span><strong>Enabled</strong></div><div className="detail-line"><span>Weekly Reports</span><strong>Every Sunday</strong></div><div className="detail-line"><span>Theme</span><strong>Light Dashboard</strong></div></div></div><div className="account-edit-panel"><div className="card-header section-inline"><h3>Edit Profile</h3><span className="status-badge light">Saved Locally</span></div><form className="expense-form profile-form" onSubmit={saveProfile}><label>Profile Picture<input type="file" accept="image/*" onChange={handleProfileImage} /><small className="field-helper">Upload a clear image for top-right profile and account preview.</small></label><label>Full Name<input value={profileForm.name} onChange={(e) => setProfileForm((s) => ({ ...s, name: e.target.value }))} type="text" /></label><label>Email<input value={profileForm.email} onChange={(e) => setProfileForm((s) => ({ ...s, email: e.target.value }))} type="email" /></label><label>Phone Number<input value={profileForm.phone} onChange={(e) => setProfileForm((s) => ({ ...s, phone: e.target.value }))} type="text" /></label><label>CNIC / ID<input value={profileForm.cnic} onChange={(e) => setProfileForm((s) => ({ ...s, cnic: e.target.value }))} type="text" /></label><label>Address<input value={profileForm.address} onChange={(e) => setProfileForm((s) => ({ ...s, address: e.target.value }))} type="text" /></label><label>Occupation<input value={profileForm.occupation} onChange={(e) => setProfileForm((s) => ({ ...s, occupation: e.target.value }))} type="text" /></label><label>Date of Birth<input value={profileForm.dob} onChange={(e) => setProfileForm((s) => ({ ...s, dob: e.target.value }))} type="text" /></label><label>Language<input value={profileForm.language} onChange={(e) => setProfileForm((s) => ({ ...s, language: e.target.value }))} type="text" /></label><button className="btn btn-primary auth-submit" type="submit">Save Profile</button></form></div></section><div className="settings-stack"><section className="dashboard-card settings-panel" id="settings"><div className="card-header section-inline"><h2>Settings</h2><span className="status-badge light">Updated</span></div><div className="settings-list"><div className="setting-row"><span>Email Notifications</span><button className={`toggle-btn ${settings.emailNotifications ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, emailNotifications: !current.emailNotifications }))}>{settings.emailNotifications ? "On" : "Off"}</button></div><div className="setting-row"><span>Monthly Budget Alerts</span><button className={`toggle-btn ${settings.budgetAlerts ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, budgetAlerts: !current.budgetAlerts }))}>{settings.budgetAlerts ? "On" : "Off"}</button></div><div className="setting-row"><span>Dark Summary Reports</span><button className={`toggle-btn ${settings.darkReports ? "active" : ""}`} type="button" onClick={() => setSettings((current) => ({ ...current, darkReports: !current.darkReports }))}>{settings.darkReports ? "On" : "Off"}</button></div></div><div className="settings-security"><div className="security-item"><span>Login Alerts</span><strong>Enabled for every new device</strong></div><div className="security-item"><span>Data Privacy</span><strong>Account info stays masked in card preview</strong></div></div><div className="settings-actions"><button className="btn btn-finance-ghost" type="button" onClick={resetDashboard}>Reset Dashboard</button></div></section><section className="dashboard-card settings-panel settings-support-card"><div className="card-header section-inline"><h2>Security Status</h2><span className="status-badge">Protected</span></div><div className="account-grid single-column"><div className="account-box"><p>Trusted Device</p><strong>This browser session is marked as secure.</strong></div><div className="account-box"><p>Backup Reminder</p><strong>Review profile, card details, and downloaded reports weekly.</strong></div><div className="account-box"><p>Quick Help</p><strong>Keep budget alerts on and update your password regularly for safer usage.</strong></div></div></section></div></section>
-        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><div><h2>Add ATM / Debit Card</h2><p className="section-copy">Type card details below and watch the secure preview, brand type, and security checks update in real time.</p></div><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><div className="card-live-preview"><div className="card-live-head"><strong>Live card readiness</strong><span>{cardCompletion}% complete</span></div><div className="card-progress-track"><div className="card-progress-fill" style={{ width: `${cardCompletion}%` }}></div></div><div className="card-checklist">{cardChecks.map((item) => <div className={`card-check-item ${item.passed ? "passed" : ""}`} key={item.label}><span>{item.passed ? "OK" : ".."}</span><strong>{item.label}</strong></div>)}</div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<select value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} required><option value="">Select bank</option>{bankOptions.map((bank) => <option key={bank} value={bank}>{bank}</option>)}</select></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: onlyDigits(e.target.value).slice(0, 6) }))} type="text" inputMode="numeric" placeholder="54000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, valid MM/YY expiry, secure CVV, and billing ZIP complete rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card atm-card-preview"><div className="atm-card-top"><div><span>{liveCardBank}</span><strong>Debit Card</strong></div><span className="atm-network">{liveCardBrand}</span></div><div className="atm-chip"></div><strong>{liveCardNumber}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{liveCardHolder}</strong></div><div><span>Expiry</span><strong>{liveCardExpiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank || "No bank linked yet"}</strong></div><div className="account-box"><p>Security</p><strong>{card.number ? "Masked and encrypted preview" : "Secure preview ready for new card"}</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.number ? `${card.bank} card added with masked number and profile binding` : "No card linked right now. Add a new ATM/debit card anytime."}</strong></div><div className="security-item"><span>CVV Storage</span><strong>{card.number ? `CVV hidden (${card.cvvMasked}) and protected for secure preview only` : "CVV will stay hidden once a card is added."}</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div><div className="security-item"><span>Brand Detection</span><strong>{card.brand || "Secure"} network identified with live number pattern check</strong></div></div></section></section>
+        <section className="dashboard-split"><section className="dashboard-card card-management-panel"><div className="card-header section-inline"><div><h2>Add ATM / Debit Card</h2><p className="section-copy">Type card details below and watch the secure preview, brand type, and security checks update in real time.</p></div><span className="status-badge light">Secure Card Vault</span></div><div className="card-intro-strip"><div><strong>Card Setup</strong><span>Add a secure card for demo wallet access and preview.</span></div><div><strong>Masked Preview</strong><span>Only the last digits are visible after save.</span></div></div><div className="card-live-preview"><div className="card-live-head"><strong>Live card readiness</strong><span>{cardCompletion}% complete</span></div><div className="card-progress-track"><div className="card-progress-fill" style={{ width: `${cardCompletion}%` }}></div></div><div className="card-checklist">{cardChecks.map((item) => <div className={`card-check-item ${item.passed ? "passed" : ""}`} key={item.label}><span>{item.passed ? "OK" : ".."}</span><strong>{item.label}</strong></div>)}</div></div><form className="expense-form card-form" id="card-form" onSubmit={saveCard}><label>Card Holder Name<input value={cardForm.holder} onChange={(e) => setCardForm((s) => ({ ...s, holder: e.target.value }))} type="text" placeholder="Enter account holder name" required /></label><label>Bank Name<select value={cardForm.bank} onChange={(e) => setCardForm((s) => ({ ...s, bank: e.target.value }))} required><option value="">Select bank</option>{bankOptions.map((bank) => <option key={bank} value={bank}>{bank}</option>)}</select></label><label>Card Number<input value={cardForm.number} onChange={(e) => setCardForm((s) => ({ ...s, number: onlyDigits(e.target.value).slice(0, 16).replace(/(.{4})/g, "$1 ").trim() }))} type="text" inputMode="numeric" maxLength={19} placeholder="1234 5678 9012 3456" required /></label><label>Expiry Date<input value={cardForm.expiry} onChange={(e) => { const digits = onlyDigits(e.target.value).slice(0, 4); setCardForm((s) => ({ ...s, expiry: digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits })); }} type="text" inputMode="numeric" maxLength={5} placeholder="MM/YY" required /></label><label>CVV<input value={cardForm.cvv} onChange={(e) => setCardForm((s) => ({ ...s, cvv: onlyDigits(e.target.value).slice(0, 3) }))} type="password" inputMode="numeric" maxLength={3} placeholder="123" required /></label><label>Billing Zip<input value={cardForm.zip} onChange={(e) => setCardForm((s) => ({ ...s, zip: onlyDigits(e.target.value).slice(0, 6) }))} type="text" inputMode="numeric" placeholder="54000" required /></label><label>Card Balance<input value={cardForm.balance} onChange={(e) => setCardForm((s) => ({ ...s, balance: e.target.value }))} type="number" min="0" step="0.01" placeholder="125000" required /></label>{cardMessage ? <small className={`field-helper ${cardMessageType === "error" ? "error" : "success"}`}>{cardMessage}</small> : <small className="field-helper">Tip: card number 16 digits, valid MM/YY expiry, secure CVV, billing ZIP, and balance complete rakhein.</small>}<button className="btn btn-primary auth-submit" type="submit">Add Secure Card</button></form></section><section className="dashboard-card saved-card-panel"><div className="card-header section-inline"><h2>Linked ATM Card</h2><span className="security-chip">Encrypted</span></div><div className="atm-card atm-card-preview"><div className="atm-card-top"><div><span>{liveCardBank}</span><strong>Debit Card</strong></div><span className="atm-network">{liveCardBrand}</span></div><div className="atm-chip"></div><strong>{liveCardNumber}</strong><div className="atm-card-bottom"><div><span>Card Holder</span><strong>{liveCardHolder}</strong></div><div><span>Expiry</span><strong>{liveCardExpiry}</strong></div></div></div><div className="card-highlight-row"><div className="account-box"><p>Linked Bank</p><strong>{card.bank || "No bank linked yet"}</strong></div><div className="account-box"><p>Card Balance</p><strong>{card.number ? formatCurrency(card.balance) : "PKR 0.00"}</strong></div><div className="account-box"><p>Security</p><strong>{card.number ? "Masked and encrypted preview" : "Secure preview ready for new card"}</strong></div></div><div className="card-security-list"><div className="security-item"><span>Card Status</span><strong>{card.number ? `${card.bank} card added with masked number and profile binding` : "No card linked right now. Add a new ATM/debit card anytime."}</strong></div><div className="security-item"><span>CVV Storage</span><strong>{card.number ? `CVV hidden (${card.cvvMasked}) and protected for secure preview only` : "CVV will stay hidden once a card is added."}</strong></div><div className="security-item"><span>Security Layer</span><strong>OTP + masked digits + manual verification</strong></div><div className="security-item"><span>Brand Detection</span><strong>{card.brand || "Secure"} network identified with live number pattern check</strong></div></div></section></section>
         <div className="floating-chatbot">
           {chatbotOpen ? (
             <div className="chatbot-widget">
@@ -1493,7 +1818,21 @@ function DashboardPage({ user, setUser, expenses, setExpenses, card, setCard, se
             </div>
           ) : null}
           <button type="button" className="chatbot-launcher" onClick={() => setChatbotOpen((value) => !value)}>
-            <span className="chatbot-launcher-icon">AI</span>
+            <span className="chatbot-launcher-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="2" fill="none"/>
+                <circle cx="7" cy="10" r="1" fill="currentColor"/>
+                <circle cx="17" cy="10" r="1" fill="currentColor"/>
+                <rect x="8" y="13" width="8" height="1.5" rx="0.75" fill="currentColor"/>
+                <rect x="4" y="18" width="16" height="2" rx="1" fill="currentColor"/>
+                <rect x="1" y="20" width="2" height="4" rx="1" fill="currentColor"/>
+                <rect x="21" y="20" width="2" height="4" rx="1" fill="currentColor"/>
+                <rect x="10" y="1" width="4" height="4" rx="2" fill="currentColor"/>
+                <circle cx="12" cy="3" r="0.5" fill="white"/>
+                <rect x="6" y="6" width="2" height="1" rx="0.5" fill="currentColor" opacity="0.6"/>
+                <rect x="16" y="6" width="2" height="1" rx="0.5" fill="currentColor" opacity="0.6"/>
+              </svg>
+            </span>
             <span>Chatbot</span>
             {unreadCount > 0 ? <span className="chatbot-badge">{unreadCount}</span> : null}
           </button>
