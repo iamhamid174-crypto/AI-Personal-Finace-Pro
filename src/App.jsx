@@ -163,40 +163,6 @@ const authSlides = [
 const chatbotLanguages = [
   { label: "Roman Urdu", value: "roman-ur" },
   { label: "English", value: "en-US" },
-  { label: "Urdu", value: "ur-PK" },
-  { label: "Hindi", value: "hi-IN" },
-  { label: "Arabic", value: "ar-SA" },
-  { label: "Turkish", value: "tr-TR" },
-  { label: "French", value: "fr-FR" },
-  { label: "Spanish", value: "es-ES" },
-  { label: "German", value: "de-DE" },
-  { label: "Italian", value: "it-IT" },
-  { label: "Portuguese", value: "pt-BR" },
-  { label: "Russian", value: "ru-RU" },
-  { label: "Chinese (Simplified)", value: "zh-CN" },
-  { label: "Japanese", value: "ja-JP" },
-  { label: "Korean", value: "ko-KR" },
-  { label: "Dutch", value: "nl-NL" },
-  { label: "Swedish", value: "sv-SE" },
-  { label: "Norwegian", value: "no-NO" },
-  { label: "Danish", value: "da-DK" },
-  { label: "Finnish", value: "fi-FI" },
-  { label: "Polish", value: "pl-PL" },
-  { label: "Czech", value: "cs-CZ" },
-  { label: "Hungarian", value: "hu-HU" },
-  { label: "Romanian", value: "ro-RO" },
-  { label: "Bulgarian", value: "bg-BG" },
-  { label: "Greek", value: "el-GR" },
-  { label: "Hebrew", value: "he-IL" },
-  { label: "Thai", value: "th-TH" },
-  { label: "Vietnamese", value: "vi-VN" },
-  { label: "Indonesian", value: "id-ID" },
-  { label: "Malay", value: "ms-MY" },
-  { label: "Filipino", value: "fil-PH" },
-  { label: "Swahili", value: "sw-KE" },
-  { label: "Afrikaans", value: "af-ZA" },
-  { label: "Amharic", value: "am-ET" },
-  { label: "Zulu", value: "zu-ZA" },
 ];
 
 const bankOptions = [
@@ -352,7 +318,7 @@ function buildLocalReply(message, prediction, user, expenses, settings, language
   const prompt = message.toLowerCase();
   const recentExpenseCount = expenses.filter((item) => item.type !== "income").length;
   const alerts = [];
-  const english = ["en-US", "fr-FR", "es-ES", "tr-TR", "de-DE", "it-IT", "pt-BR", "nl-NL", "sv-SE", "no-NO", "da-DK", "fi-FI", "pl-PL", "cs-CZ", "hu-HU", "ro-RO", "bg-BG", "el-GR", "he-IL", "th-TH", "vi-VN", "id-ID", "ms-MY", "fil-PH", "sw-KE", "af-ZA", "am-ET", "zu-ZA"].includes(languageMode);
+  const english = ["en-US", "fr-FR", "es-ES", "tr-TR"].includes(languageMode);
   const urdu = ["ur-PK", "hi-IN", "ar-SA"].includes(languageMode);
   const { avgExpense, latestExpense, secondCategory, topShare } = buildExpenseInsights(expenses, prediction);
 
